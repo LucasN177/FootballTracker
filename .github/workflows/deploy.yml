@@ -2,7 +2,7 @@ name: Deploy Blazor WASM to GitHub Pages
 
 on:
   push:
-    branches: [ "main" ] 
+    branches: [ "main" ]  
 
 jobs:
   build-deploy:
@@ -17,17 +17,27 @@ jobs:
       with:
         dotnet-version: 9.0.x   
 
-    - name: Restore
-      run: dotnet restore
-
     - name: Publish
       run: dotnet publish -c Release -o release
 
-    - name: Change base href
+    - name: Update base href
       run: sed -i 's/<base href="\/" \/>/<base href="\/FootballTracker\/" \/>/' release/wwwroot/index.html
 
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v2
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: release/wwwroot
+        path: release/wwwroot
+
+  deploy:
+    needs: build-deploy
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write      # für Pages-Deploy
+      id-token: write   # für OIDC
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
