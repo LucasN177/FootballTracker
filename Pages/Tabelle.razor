@@ -1,3 +1,54 @@
-@page "/Tabelle"
-<h3>Tabelle</h3>
+@page "/tabelle"
+@using FootballTracker
+@using FootballTracker.Core.Models
+@using FootballTracker.Services
+@inject TabellenService TabellenService
+
+<MudPaper Class="pa-6">
+    <MudText Typo="Typo.h4" Class="mb-4 font-weight-bold" Style="margin-top: 30px">
+        Bundesliga Tabelle
+    </MudText>
+
+    <MudTable Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true">
+        <HeaderContent>
+            <MudTh>Platz</MudTh>
+            <MudTh>Team</MudTh>
+            <MudTh>Spiele</MudTh>
+            <MudTh>Siege</MudTh>
+            <MudTh>Unentschieden</MudTh>
+            <MudTh>Niederlagen</MudTh>
+            <MudTh>Tore</MudTh>
+            <MudTh>Differenz</MudTh>
+            <MudTh>Punkte</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Platz">@context.TabellenPlatz</MudTd>
+            <MudTd DataLabel="Team">
+                <MudImage Height="40" Width="40" Class="mr-2" Src="@context.LogoUrl" Style="object-fit: contain" />
+                @context.Name
+            </MudTd>
+            <MudTd DataLabel="Spiele">@context.Spiele</MudTd>
+            <MudTd DataLabel="Siege">@context.Siege</MudTd>
+            <MudTd DataLabel="Unentschieden">@context.Unentschieden</MudTd>
+            <MudTd DataLabel="Niederlagen">@context.Niederlagen</MudTd>
+            <MudTd DataLabel="Tore">@context.Tore:@context.Gegentore</MudTd>
+            <MudTd DataLabel="Differenz">@context.Differenz</MudTd>
+            <MudTd DataLabel="Punkte" Class="font-weight-bold">
+                @context.Punkte
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<Team> _teams = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _teams = await TabellenService.GetBundesligaTabelle(2025);
+    }
+}
+
+
+
 

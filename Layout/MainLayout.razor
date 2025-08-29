@@ -1,4 +1,5 @@
-﻿@using FootballTracker.Services
+﻿@using FootballTracker.Core.Models
+@using FootballTracker.Services
 @inherits LayoutComponentBase
 @inject AppStateService AppStateService
 
@@ -14,17 +15,16 @@
 
 <MudLayout>
     
-    <MudAppBar Elevation="2" Color="Color.Primary" Fixed="true" Dense="false">
-        <MudIconButton Icon="Icons.Material.Filled.Menu" 
+    <MudAppBar Elevation="2" Color="Color.Primary" Fixed="true" Dense="false" Style="margin-right: 20px">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" 
                        Color="Color.Inherit" 
                        Edge="Edge.Start" 
                        OnClick="@(() => @AppStateService.DrawerToggle())" />
         
-        <MudSpacer />
-        
         <MudImage Src="Resources/img/Bundesliga-Logo.jpeg"
                   Alt="Bundesliga" 
-                  Height="40" 
+                  Height="40"
+                  
                   Class="mr-4" 
                   ObjectFit="ObjectFit.Contain" />
         
@@ -35,16 +35,16 @@
         <MudSpacer />
         
         <!-- Season Selector -->
-        <MudSelect T="string"
+        <MudSelect T="Season"
                    @bind-Value="AppStateService.SelectedSeason"
                    Variant="Variant.Outlined"
                    Dense="true"
                    Class="mr-4"
-                   Style="min-width: 120px; color: white;">
-            <MudSelectItem Value="@("2025/26")">2024/25</MudSelectItem>
-            <MudSelectItem Value="@("2024/25")">2024/25</MudSelectItem>
-            <MudSelectItem Value="@("2023/24")">2023/24</MudSelectItem>
-            <MudSelectItem Value="@("2022/23")">2022/23</MudSelectItem>
+                   Style="min-width: 50px; color: white; width: 60px">
+            @foreach (var season in _seasonList)
+            {
+                <MudSelect T="Season" @bind-Value="AppStateService.SelectedSeason">@season.Name</MudSelect>
+            }
         </MudSelect>
         
         <!-- Dark Mode Toggle -->
@@ -217,6 +217,8 @@
 @code
 {
     private bool _statisticsExpanded = false;
+
+    private List<Season> _seasonList;
     
     private MudTheme _theme = new()
     {
@@ -276,7 +278,11 @@
         Shadows = new Shadow(),
         ZIndex = new ZIndex()
     };
-    
-    
-    
+
+    protected override Task OnInitializedAsync()
+    {
+        _seasonList = AppStateService.Saisons;
+        return base.OnInitializedAsync();
+    }
+
 }

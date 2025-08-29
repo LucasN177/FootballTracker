@@ -20,10 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Core\Enums\" />
     <Folder Include="Core\Interfaces\" />
-    <Folder Include="Core\Models\" />
-    <Folder Include="Infrastructure\" />
     <Folder Include="Resources\img\" />
+    <Folder Include="wwwroot\Resources\img\" />
   </ItemGroup>
 
 </Project>
