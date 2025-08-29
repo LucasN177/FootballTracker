@@ -37,7 +37,6 @@ public class TabellenService
                 Punkte = t.points
             });
         }
-
         return teams;
     }
     

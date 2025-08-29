@@ -28,10 +28,14 @@ public class AppStateService
         }
     };
     public bool IsDarkMode { get; private set; }
-    public Season SelectedSeason { get; set; } = Saisons[0];
+    public Season SelectedSeason { get; set; }
 
     public bool IsDrawerOpen { get; set; } = true;
 
+    public AppStateService()
+    {
+        SelectedSeason = Saisons[0];
+    }
     public event Action? OnChange;
 
     public void ToggleDarkMode()

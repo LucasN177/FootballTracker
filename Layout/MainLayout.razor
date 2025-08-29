@@ -2,6 +2,8 @@
 @using FootballTracker.Services
 @inherits LayoutComponentBase
 @inject AppStateService AppStateService
+@inject NavigationManager NavigationManager
+@inject TabellenService TabellenService
 
 @* Required *@
 <MudThemeProvider Theme="@_theme" IsDarkMode="@AppStateService.IsDarkMode"/>
@@ -40,10 +42,11 @@
                    Variant="Variant.Outlined"
                    Dense="true"
                    Class="mr-4"
-                   Style="min-width: 50px; color: white; width: 60px">
+                   Style="min-width: 50px; color: white; width: 60px"
+                   OnClose="OnSeasonChanged">
             @foreach (var season in _seasonList)
             {
-                <MudSelect T="Season" @bind-Value="AppStateService.SelectedSeason">@season.Name</MudSelect>
+                <MudSelectItem T="Season" Value="season">@season.Name</MudSelectItem>
             }
         </MudSelect>
         
@@ -283,6 +286,12 @@
     {
         _seasonList = AppStateService.Saisons;
         return base.OnInitializedAsync();
+    }
+    
+    private async Task OnSeasonChanged()
+    {
+        NavigationManager.NavigateTo("/");
+        NavigationManager.NavigateTo("/Tabelle");
     }
 
 }

@@ -1,8 +1,9 @@
-@page "/tabelle"
+@page "/Tabelle"
 @using FootballTracker
 @using FootballTracker.Core.Models
 @using FootballTracker.Services
 @inject TabellenService TabellenService
+@inject AppStateService AppStateService
 
 <MudPaper Class="pa-6">
     <MudText Typo="Typo.h4" Class="mb-4 font-weight-bold" Style="margin-top: 30px">
@@ -45,7 +46,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _teams = await TabellenService.GetBundesligaTabelle(2025);
+        Console.WriteLine(AppStateService.SelectedSeason.year);
+        _teams = await TabellenService.GetBundesligaTabelle(AppStateService.SelectedSeason.year);
     }
 }
 
