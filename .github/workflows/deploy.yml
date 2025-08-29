@@ -24,7 +24,7 @@ jobs:
       run: sed -i 's/<base href="\/" \/>/<base href="\/FootballTracker\/" \/>/' release/wwwroot/index.html
 
     - name: Upload artifact
-      uses: actions/upload-pages-artifact@v2
+      uses: actions/upload-pages-artifact@v4
       with:
         path: release/wwwroot
 
