@@ -28,6 +28,9 @@ jobs:
     - name: Update base href
       run: sed -i 's/<base href="\/" \/>/<base href="\/FootballTracker\/" \/>/' release/wwwroot/index.html
 
+    - name: Copy index.html to 404.html
+      run: cp release/wwwroot/index.html release/wwwroot/404.html
+
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v4
       with:
