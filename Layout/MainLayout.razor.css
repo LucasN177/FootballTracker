@@ -74,4 +74,31 @@ main {
         padding-left: 2rem !important;
         padding-right: 1.5rem !important;
     }
+
+    .content-wrapper {
+        min-height: calc(100vh - 140px);
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .mud-nav-link:hover {
+        transform: translateX(4px);
+        transition: transform 0.2s ease;
+    }
+
+    .mud-appbar {
+        background: linear-gradient(45deg, #d20a11 0%, #ff4444 100%) !important;
+    }
+
+    .mud-drawer-header {
+        background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    }
+
+    .mud-theme-dark .mud-drawer-header {
+        background: linear-gradient(135deg, #2d2d30 0%, #1e1e1e 100%);
+    }
 }

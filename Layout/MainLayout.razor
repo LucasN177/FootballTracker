@@ -1,7 +1,9 @@
-﻿@inherits LayoutComponentBase
+﻿@using FootballTracker.Services
+@inherits LayoutComponentBase
+@inject AppStateService AppStateService
 
 @* Required *@
-<MudThemeProvider />
+<MudThemeProvider Theme="@_theme" IsDarkMode="@AppStateService.IsDarkMode"/>
 <MudPopoverProvider />
 
 @* Needed for dialogs *@
@@ -10,18 +12,271 @@
 @* Needed for snackbars *@
 <MudSnackbarProvider />
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<MudLayout>
+    
+    <MudAppBar Elevation="2" Color="Color.Primary" Fixed="true" Dense="false">
+        <MudIconButton Icon="Icons.Material.Filled.Menu" 
+                       Color="Color.Inherit" 
+                       Edge="Edge.Start" 
+                       OnClick="@(() => @AppStateService.DrawerToggle())" />
+        
+        <MudSpacer />
+        
+        <MudImage Src="Resources/img/Bundesliga-Logo.jpeg"
+                  Alt="Bundesliga" 
+                  Height="40" 
+                  Class="mr-4" 
+                  ObjectFit="ObjectFit.Contain" />
+        
+        <MudText Typo="Typo.h5" Class="mr-6 font-weight-bold">
+            Bundesliga Tracker
+        </MudText>
+        
+        <MudSpacer />
+        
+        <!-- Season Selector -->
+        <MudSelect T="string"
+                   @bind-Value="AppStateService.SelectedSeason"
+                   Variant="Variant.Outlined"
+                   Dense="true"
+                   Class="mr-4"
+                   Style="min-width: 120px; color: white;">
+            <MudSelectItem Value="@("2025/26")">2024/25</MudSelectItem>
+            <MudSelectItem Value="@("2024/25")">2024/25</MudSelectItem>
+            <MudSelectItem Value="@("2023/24")">2023/24</MudSelectItem>
+            <MudSelectItem Value="@("2022/23")">2022/23</MudSelectItem>
+        </MudSelect>
+        
+        <!-- Dark Mode Toggle -->
+        <MudIconButton Icon="@(AppStateService.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
+                       Color="Color.Inherit" 
+                       OnClick="@AppStateService.ToggleDarkMode" />
+        
+        <!-- Settings -->
+        <MudIconButton Icon="@Icons.Material.Filled.Settings" 
+                       Color="Color.Inherit" />
+    </MudAppBar>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+    <!-- Navigation Drawer -->
+    <MudDrawer @bind-Open="AppStateService.IsDrawerOpen" 
+               ClipMode="DrawerClipMode.Always" 
+               Elevation="2"
+               Variant="@DrawerVariant.Mini"
+               OpenMiniOnHover="true">
+        <!--
+        <MudDrawerHeader Class="pa-4 pb-2">
+            <MudStack Row="false">
+                <div class="d-flex align-center">
+                    <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="mr-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Sports"/>
+                    </MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="font-weight-bold">BL Tracker</MudText>
+                        <MudText Typo="Typo.caption" Class="text-muted">Saison @_selectedSeason</MudText>
+                    </div>
+                </div>
+                <div class="d-flex align-center">
+                    <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="mr-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Sports"/>
+                    </MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="font-weight-bold">Coming soon</MudText>
+                        <MudText Typo="Typo.caption" Class="text-muted">+++++++++++++</MudText>
+                    </div>
+                </div>    
+            </MudStack>
+            
+        </MudDrawerHeader>
+        
+        <MudDivider Class="mb-2" />
+        
+        -->
+        <MudNavMenu Class="pa-2" >
+    <!-- Dashboard -->
+    <MudNavLink Href="/" 
+                Icon="@Icons.Material.Filled.Dashboard"
+                IconColor="Color.Primary"
+                Match="NavLinkMatch.All">
+        Dashboard
+    </MudNavLink>
+    
+    <!-- Tabelle -->
+    <MudNavLink Href="/Tabelle" 
+                Icon="@Icons.Material.Filled.TableChart"
+                IconColor="Color.Success">
+        Tabelle
+    </MudNavLink>
+    
+    <!-- Spieltage -->
+    <MudNavLink Href="/Spieltage" 
+                Icon="@Icons.Material.Filled.CalendarMonth"
+                IconColor="Color.Info">
+        Spieltage
+    </MudNavLink>
+    
+    <!-- Teams -->
+    <MudNavLink Href="/Teams" 
+                Icon="@Icons.Material.Filled.Groups"
+                IconColor="Color.Warning">
+        Teams
+    </MudNavLink>
+    
+    <!-- Spieler -->
+    <MudNavLink Href="/Spieler" 
+                Icon="@Icons.Material.Filled.Person"
+                IconColor="Color.Tertiary">
+        Spieler
+    </MudNavLink>
+    
+    <!-- Statistiken -->
+    <MudNavGroup Title="Statistiken" 
+                 Icon="@Icons.Material.Filled.Analytics"
+                 IconColor="Color.Tertiary"
+                 Expanded="@_statisticsExpanded">
+        <MudNavLink Href="/statistiken/tore" 
+                    Icon="@Icons.Material.Filled.GolfCourse">
+            Torstatistiken
+        </MudNavLink>
+        <MudNavLink Href="/statistiken/karten" 
+                    Icon="@Icons.Material.Filled.Style">
+            Karten
+        </MudNavLink>
+        <MudNavLink Href="/statistiken/performance" 
+                    Icon="@Icons.Material.Filled.TrendingUp">
+            Performance
+        </MudNavLink>
+        <MudNavLink Href="/statistiken/vergleich" 
+                    Icon="@Icons.Material.Filled.Compare">
+            Team Vergleich
+        </MudNavLink>
+    </MudNavGroup>
+    
+    <!-- Live Scores -->
+    <MudNavLink Href="/live" 
+                Icon="@Icons.Material.Filled.LiveTv"
+                IconColor="Color.Error">
+        Live Scores
+        <MudChip T="string"
+                 Size="Size.Small" 
+                 Color="Color.Error" 
+                 Class="ml-2 live-indicator">
+            Live
+        </MudChip>
+    </MudNavLink>
+    
+    <!-- Favoriten -->
+    <MudDivider Class="my-2" />
+    
+    <MudText Typo="Typo.caption" 
+             Class="px-4 py-2 text-muted font-weight-bold">
+        FAVORITEN
+    </MudText>
+    
+    <MudNavLink Href="/favoriten/teams" 
+                Icon="@Icons.Material.Filled.Favorite"
+                IconColor="Color.Error">
+        Meine Teams
+    </MudNavLink>
+    
+    <MudNavLink Href="/favoriten/spieler" 
+                Icon="@Icons.Material.Filled.Star"
+                IconColor="Color.Warning">
+        Top Spieler
+    </MudNavLink>
+</MudNavMenu>
+        
+        <MudSpacer />
+        
+        <!-- Footer in Drawer -->
+        <div class="pa-4">
+            <MudDivider Class="mb-4" />
+            <MudText Color="Color.Secondary" Typo="Typo.caption" Class="text-center text-muted">
+                Bundesliga Tracker v0.1
+            </MudText>
+            <MudText Color="Color.Secondary" Typo="Typo.caption" Class="text-center text-muted">
+                © 2025
+            </MudText>
         </div>
+        
+        </MudDrawer>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+        <!-- Main Content -->
+    <MudMainContent Class="pa-4">
+        <!-- Breadcrumbs -->
+        
+        
+        <!-- Page Content Container -->
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+            <div class="content-wrapper">
+                @Body
+            </div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code
+{
+    private bool _statisticsExpanded = false;
+    
+    private MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#d20a11", // Bundesliga Rot
+            Secondary = "#000000", // Schwarz
+            AppbarText = "#ffffff",
+            Success = "#2e7d32",
+            Info = "#1976d2",
+            Warning = "#f57c00",
+            Error = "#d32f2f",
+            Dark = "#212121",
+            TextPrimary = "#212121",
+            TextSecondary = "#666666",
+            Background = "#ffffff",
+            Surface = "#f5f5f5",
+            DrawerBackground = "#f0f0f0",
+            AppbarBackground = "#d20a11"
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#ff4444",
+            Secondary = "#ffffff",
+            AppbarText = "#ffffff",
+            Success = "#4caf50",
+            Info = "#2196f3",
+            Warning = "#ff9800",
+            Error = "#f44336",
+            Dark = "#1a1a1a",
+            TextPrimary = "#ffffff",
+            TextSecondary = "#b0b0b0",
+            Background = "#121212",
+            Surface = "#1e1e1e",
+            DrawerBackground = "#1a1a1a",
+            AppbarBackground = "#d20a11"
+        },
+        Typography = new Typography()
+        {
+            Default = new DefaultTypography()
+            {
+                FontFamily = new[] { "Roboto", "Helvetica", "Arial", "sans-serif" }
+            },
+            H4 = new H4Typography()
+            {
+                FontWeight = "600"
+            },
+            H5 = new H5Typography()
+            {
+                FontWeight = "500"
+            },
+            H6 = new H6Typography()
+            {
+                FontWeight = "500"
+            }
+        },
+        Shadows = new Shadow(),
+        ZIndex = new ZIndex()
+    };
+    
+    
+    
+}
