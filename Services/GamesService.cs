@@ -17,21 +17,10 @@ public class GamesService
         {
                 var url = $"https://api.openligadb.de/getmatchdata/{league}/{season}/{matchDay}";
 
-                var response = await _httpClient.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                var jsonContent = await response.Content.ReadAsStringAsync();
+                var apiGames = await _httpClient.GetFromJsonAsync<List<Game>>(url);
                 
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                };
-
-                var games = JsonSerializer.Deserialize<List<Game>>(jsonContent, options);
-                
-                return games ?? new List<Game>();
             
+                return apiGames;
         }
 
         public async Task<List<Game>> GetCurrentMatchDayAsync()
@@ -53,6 +42,7 @@ public class GamesService
             // Vereinfachte Logik - könnte durch eine separate API-Abfrage ersetzt werden
             var seasonStart = new DateTime(2025, 8, 1);
             var weeksSinceStart = (DateTime.Now - seasonStart).Days / 7;
-            return Math.Max(1, Math.Min(34, (int)weeksSinceStart + 1));
+            //return Math.Max(1, Math.Min(34, (int)weeksSinceStart + 1));
+            return 2;
         }
     }

@@ -1,0 +1,321 @@
+
+@using FootballTracker.Core.Models
+@using MudBlazor
+@inject ILogger<GameDetailCard> Logger
+
+<MudCard Elevation="2" Class="game-card">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <div class="d-flex justify-space-between align-center">
+                <MudChip T="string" Color="@GetGameStatus().Color" 
+                        Size="Size.Small" 
+                        Variant="@GetGameStatus().Variant">
+                    @GetGameStatus().Text
+                </MudChip>
+                
+                <MudIconButton Icon="@(IsFavorite ? Icons.Material.Filled.Favorite : Icons.Material.Filled.FavoriteBorder)"
+                              Color="@(IsFavorite ? Color.Error : Color.Default)"
+                              Size="Size.Small"
+                              OnClick="HandleFavoriteClick" />
+            </div>
+        </CardHeaderContent>
+    </MudCardHeader>
+    
+    <MudCardContent>
+        <!-- Teams -->
+        <div class="teams-container mb-4">
+            <div class="team-section">
+                @if (!string.IsNullOrEmpty(Game.Team1?.LogoUrl))
+                {
+                    <MudAvatar Size="Size.Large" Class="mb-2">
+                        <MudImage Src="@Game.Team1.LogoUrl" 
+                                 Alt="@Game.Team1.ShortName" 
+                                 ObjectFit="ObjectFit.Contain"
+                                 Style="object-fit: contain"
+                                 Loading="Loading.Lazy" />
+                    </MudAvatar>
+                }
+                <MudText Typo="Typo.body1" Align="Align.Center" Class="font-weight-medium">
+                    @(Game.Team1?.ShortName ?? "Team 1")
+                </MudText>
+            </div>
+            
+            <div class="score-section">
+                <MudText Typo="Typo.h4" Align="Align.Center" Color="Color.Primary" Class="font-weight-bold">
+                    @GetScoreDisplay()
+                </MudText>
+                <MudText Typo="Typo.caption" Align="Align.Center" Color="Color.Secondary">
+                    @GetFormattedDateTime()
+                </MudText>
+            </div>
+            
+            <div class="team-section">
+                @if (!string.IsNullOrEmpty(Game.Team2?.LogoUrl))
+                {
+                    <MudAvatar Size="Size.Large" Class="mb-2">
+                        <MudImage Src="@Game.Team2.LogoUrl" 
+                                 Alt="@Game.Team2.ShortName" 
+                                 ObjectFit="ObjectFit.Contain"
+                                 Loading="Loading.Lazy" />
+                    </MudAvatar>
+                }
+                <MudText Typo="Typo.body1" Align="Align.Center" Class="font-weight-medium">
+                    @(Game.Team2?.ShortName ?? "Team 2")
+                </MudText>
+            </div>
+        </div>
+
+        <!-- Goals -->
+        @if (Game.Goals?.Any() == true)
+        {
+            <MudDivider Class="mb-3" />
+            <MudText Typo="Typo.subtitle2" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Size="Size.Small" Class="mr-1" />
+                Tore (@Game.Goals.Count)
+            </MudText>
+            <MudStack Spacing="1">
+                @foreach (var goal in Game.Goals.OrderBy(g => g.MatchMinute))
+                {
+                    <div class="goal-item">
+                        <div class="d-flex justify-space-between align-center">
+                            <MudText Typo="Typo.caption">
+                                <strong>@goal.MatchMinute'</strong> @(goal.GoalGetterName ?? "Unbekannt")
+                                @if (goal.IsPenalty) 
+                                { 
+                                    <MudIcon Icon="@Icons.Material.Filled.GpsFixed" 
+                                            Size="Size.Small" 
+                                            Title="Elfmeter" 
+                                            Color="Color.Info" 
+                                            Class="ml-1" />
+                                }
+                                @if (goal.IsOwnGoal) 
+                                { 
+                                    <MudIcon Icon="@Icons.Material.Filled.Warning" 
+                                            Size="Size.Small" 
+                                            Title="Eigentor" 
+                                            Color="Color.Error" 
+                                            Class="ml-1" />
+                                }
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary">
+                                @($"{goal.ScoreTeam1}:{goal.ScoreTeam2}")
+                            </MudChip>
+                        </div>
+                    </div>
+                }
+            </MudStack>
+        }
+
+        <!-- Additional Info for finished games -->
+        @if (Game.MatchIsFinished && Game.Goals?.Any() != true)
+        {
+            <MudDivider Class="mb-3" />
+            <div class="text-center">
+                <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Size="Size.Medium" Color="Color.Secondary" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Keine Tore verfügbar
+                </MudText>
+            </div>
+        }
+    </MudCardContent>
+    
+    <MudCardActions Class="justify-space-between">
+        <div>
+            <MudButton Variant="Variant.Text" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Info"
+                      Size="Size.Small"
+                      OnClick="HandleDetailsClick">
+                Details
+            </MudButton>
+        </div>
+        
+        <div>
+            @if (Game.MatchIsFinished)
+            {
+                <MudButton Variant="Variant.Text" 
+                          Color="Color.Secondary" 
+                          StartIcon="@Icons.Material.Filled.Assessment"
+                          Size="Size.Small"
+                          OnClick="HandleStatsClick">
+                    Stats
+                </MudButton>
+            }
+            else if (IsUpcoming())
+            {
+                <MudChip T="string" Size="Size.Small" 
+                        Color="Color.Info" 
+                        Variant="Variant.Text"
+                        Icon="@Icons.Material.Filled.Schedule">
+                    @GetTimeUntilMatch()
+                </MudChip>
+            }
+        </div>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter] public Game Game { get; set; } = new();
+    [Parameter] public bool IsFavorite { get; set; }
+    [Parameter] public EventCallback<Game> OnFavoriteToggle { get; set; }
+    [Parameter] public EventCallback<Game> OnDetailsClick { get; set; }
+    [Parameter] public EventCallback<Game> OnStatsClick { get; set; }
+
+    private async Task HandleFavoriteClick()
+    {
+        try
+        {
+            await OnFavoriteToggle.InvokeAsync(Game);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error toggling favorite for game {GameId}", Game.MatchId);
+        }
+    }
+
+    private async Task HandleDetailsClick()
+    {
+        try
+        {
+            await OnDetailsClick.InvokeAsync(Game);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error showing details for game {GameId}", Game.MatchId);
+        }
+    }
+
+    private async Task HandleStatsClick()
+    {
+        try
+        {
+            await OnStatsClick.InvokeAsync(Game);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error showing stats for game {GameId}", Game.MatchId);
+        }
+    }
+
+    private (string Text, Color Color, Variant Variant) GetGameStatus()
+    {
+        if (Game.MatchIsFinished)
+            return ("Beendet", Color.Success, Variant.Filled);
+
+        if (Game.MatchDateTime > DateTime.Now)
+            return ("Angesetzt", Color.Info, Variant.Outlined);
+
+        return ("Live", Color.Error, Variant.Filled);
+    }
+
+    private string GetScoreDisplay()
+    {
+        var finalResult = Game.MatchResults?.FirstOrDefault(r => r.ResultTypeId == 2);
+        if (finalResult != null)
+            return $"{finalResult.PointsTeam1} : {finalResult.PointsTeam2}";
+
+        if (Game.MatchDateTime > DateTime.Now)
+            return Game.MatchDateTime.ToString("HH:mm");
+
+        return "- : -";
+    }
+
+    private string GetFormattedDateTime()
+    {
+        return Game.MatchDateTime.ToString("dd.MM. HH:mm");
+    }
+
+    private bool IsUpcoming()
+    {
+        return !Game.MatchIsFinished && Game.MatchDateTime > DateTime.Now;
+    }
+
+    private string GetTimeUntilMatch()
+    {
+        if (!IsUpcoming()) return "";
+
+        var timeUntil = Game.MatchDateTime - DateTime.Now;
+        
+        if (timeUntil.TotalDays >= 1)
+            return $"in {(int)timeUntil.TotalDays}d";
+        else if (timeUntil.TotalHours >= 1)
+            return $"in {(int)timeUntil.TotalHours}h";
+        else if (timeUntil.TotalMinutes >= 1)
+            return $"in {(int)timeUntil.TotalMinutes}min";
+        else
+            return "gleich";
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Game == null)
+        {
+            Logger.LogWarning("Game parameter is null");
+            Game = new Game();
+        }
+    }
+}
+
+<style>
+    .game-card {
+        transition: all 0.2s ease-in-out;
+        height: 100%;
+        cursor: pointer;
+    }
+
+    .game-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .teams-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .team-section {
+        flex: 1;
+        text-align: center;
+        min-width: 0; /* Allows text truncation */
+    }
+
+    .score-section {
+        flex: 0 0 auto;
+        text-align: center;
+        min-width: 80px;
+    }
+
+    .goal-item {
+        padding: 4px 8px;
+        border-left: 3px solid blue;
+        margin: 4px 0;
+        background-color: blue;
+        border-radius: 4px;
+    }
+
+    .goal-item:hover {
+        background-color: lightgray;
+    }
+
+    /* Mobile responsiveness */
+    
+
+        .score-section {
+            margin: 12px 0;
+            min-width: auto;
+        }
+
+        .team-section {
+            width: 100%;
+        }
+    
+
+    /* Ensure images don't break layout */
+    .mud-avatar img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+</style>
