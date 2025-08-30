@@ -1,0 +1,9 @@
+<MudPaper Class="pa6">
+    <MudChart ChartType="ChartType.Pie" InputData="@data" @bind-SelectedIndex="Index" InputLabels="@labels" Width="300px" Height="300px" Style="margin: 30px"/>
+</MudPaper>
+
+@code {
+    private int Index = -1;
+    double[] data = { 7, 5 ,6 };
+    string[] labels = { "Sieg", "Unentschieden", "Niederlage" };
+}
