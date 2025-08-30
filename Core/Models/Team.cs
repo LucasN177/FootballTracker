@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace FootballTracker.Core.Models;
 
 public class Team
@@ -6,6 +8,7 @@ public class Team
     public int TabellenPlatz { get; set; }
     public string Name { get; set; } = string.Empty;
     public string ShortName { get; set; } = string.Empty;
+    [JsonPropertyName("teamIconUrl")]
     public string LogoUrl { get; set; } = string.Empty;
     public int Spiele { get; set; }
     public int Siege { get; set; }

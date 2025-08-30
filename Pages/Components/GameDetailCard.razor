@@ -27,13 +27,14 @@
             <div class="team-section">
                 @if (!string.IsNullOrEmpty(Game.Team1?.LogoUrl))
                 {
-                    <MudAvatar Size="Size.Large" Class="mb-2">
                         <MudImage Src="@Game.Team1.LogoUrl" 
                                  Alt="@Game.Team1.ShortName" 
                                  ObjectFit="ObjectFit.Contain"
                                  Style="object-fit: contain"
+                                 Height="50"
+                                 Width="50"
                                  Loading="Loading.Lazy" />
-                    </MudAvatar>
+                    
                 }
                 <MudText Typo="Typo.body1" Align="Align.Center" Class="font-weight-medium">
                     @(Game.Team1?.ShortName ?? "Team 1")
@@ -52,12 +53,12 @@
             <div class="team-section">
                 @if (!string.IsNullOrEmpty(Game.Team2?.LogoUrl))
                 {
-                    <MudAvatar Size="Size.Large" Class="mb-2">
                         <MudImage Src="@Game.Team2.LogoUrl" 
                                  Alt="@Game.Team2.ShortName" 
                                  ObjectFit="ObjectFit.Contain"
+                                 Height="50"
+                                 Width="50"
                                  Loading="Loading.Lazy" />
-                    </MudAvatar>
                 }
                 <MudText Typo="Typo.body1" Align="Align.Center" Class="font-weight-medium">
                     @(Game.Team2?.ShortName ?? "Team 2")

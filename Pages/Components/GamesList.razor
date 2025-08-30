@@ -1,0 +1,24 @@
+@using FootballTracker.Core.Models
+@using MudBlazor
+
+@if (Games == null || !Games.Any())
+{
+    <div class="text-center pa-8">
+        <MudIcon Icon="@Icons.Material.Filled.SportsScore" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
+        <MudText Typo="Typo.body1" Color="Color.Secondary">Keine Spiele in dieser Kategorie</MudText>
+    </div>
+}
+else
+{
+    <MudStack Spacing="3">
+        @foreach (var game in Games)
+        {
+            <GameCard Game="game" />
+        }
+    </MudStack>
+}
+
+@code {
+    [Parameter] 
+    public List<Game> Games { get; set; } = new();
+}

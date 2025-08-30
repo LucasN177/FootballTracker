@@ -1,3 +1,4 @@
+@using System.Diagnostics
 @using FootballTracker.Core.Models
 @using FootballTracker.Core.Models.Extensions
 @using FootballTracker.Services
@@ -81,103 +82,6 @@
 </MudPaper>
 
 @code {
-    // Component for Games List
-    private RenderFragment<List<Game>> GamesList => games => __builder =>
-    {
-        if (games == null || !games.Any())
-        {
-            <div class="text-center pa-8">
-                <MudIcon Icon="@Icons.Material.Filled.SportsScore" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
-                <MudText Typo="Typo.body1" Color="Color.Secondary">Keine Spiele in dieser Kategorie</MudText>
-            </div>
-        }
-        else
-        {
-            <MudStack Spacing="3">
-                @foreach (var game in games)
-                {
-                    <GameCard Game="game" />
-                }
-            </MudStack>
-        }
-    };
-
-    // Component for individual Game Card
-    private RenderFragment<Game> GameCard => game => __builder =>
-    {
-        var status = GetGameStatus(game);
-        var scoreDisplay = GetScoreDisplay(game);
-
-        <MudCard Elevation="1" Class="pa-4 hover-card">
-            <MudCardContent Class="pa-0">
-                <!-- Teams Row -->
-                <div class="d-flex align-center justify-space-between mb-3">
-                    <!-- Team 1 -->
-                    <div class="d-flex align-center" style="flex: 1;">
-                        @if (!string.IsNullOrEmpty(game.Team1?.LogoUrl))
-                        {
-                            <MudAvatar Size="Size.Medium" Class="mr-3">
-                                <MudImage Src="@game.Team1.LogoUrl" Alt="@game.Team1.ShortName" ObjectFit="ObjectFit.Contain" />
-                            </MudAvatar>
-                        }
-                        <MudText Typo="Typo.body1" Class="font-weight-medium">@game.Team1?.ShortName</MudText>
-                    </div>
-
-                    <!-- Status Badge -->
-                    <MudChip T="string" Color="@status.Color" Size="Size.Small" Variant="@status.Variant" Class="mx-3">
-                        @status.Text
-                    </MudChip>
-
-                    <!-- Team 2 -->
-                    <div class="d-flex align-center justify-end" style="flex: 1;">
-                        <MudText Typo="Typo.body1" Class="font-weight-medium mr-3">@game.Team2?.ShortName</MudText>
-                        @if (!string.IsNullOrEmpty(game.Team2?.LogoUrl))
-                        {
-                            <MudAvatar Size="Size.Medium">
-                                <MudImage Src="@game.Team2.LogoUrl" Alt="@game.Team2.ShortName" ObjectFit="ObjectFit.Contain" />
-                            </MudAvatar>
-                        }
-                    </div>
-                </div>
-
-                <!-- Score and Time Row -->
-                <div class="d-flex align-center justify-space-between">
-                    <div class="d-flex align-center">
-                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Color="Color.Secondary" Class="mr-1" />
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @game.GetFormattedDateTime("dd.MM. HH:mm")
-                        </MudText>
-                    </div>
-
-                    <MudText Typo="Typo.h6" Class="font-weight-bold" Color="Color.Primary">
-                        @scoreDisplay
-                    </MudText>
-                </div>
-
-                <!-- Goals Section -->
-                @if (game.Goals?.Any() == true)
-                {
-                    <MudDivider Class="my-2" />
-                    <MudStack Spacing="1">
-                        @foreach (var goal in game.Goals.OrderBy(g => g.MatchMinute))
-                        {
-                            <div class="d-flex justify-space-between align-center">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    <MudIcon Icon="@GetGoalIcon(goal)" Size="Size.Small" Class="mr-1" />
-                                    @($"{goal.MatchMinute}' {goal.GoalGetterName}")
-                                    @if (goal.IsPenalty) { <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">(Elfmeter)</MudChip> }
-                                    @if (goal.IsOwnGoal) { <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text">(Eigentor)</MudChip> }
-                                </MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Primary" Class="font-weight-medium">
-                                    @($"{goal.ScoreTeam1}:{goal.ScoreTeam2}")
-                                </MudText>
-                            </div>
-                        }
-                    </MudStack>
-                }
-            </MudCardContent>
-        </MudCard>
-    };
 
     // Properties
     private List<Game> AllGames { get; set; } = new();
@@ -189,6 +93,7 @@
     private int ActiveTabIndex { get; set; } = 0;
     private int SelectedMatchDay { get; set; } = 2;
     private DateTime LastUpdateTime { get; set; } = DateTime.Now;
+    
 
     // Lifecycle
     protected override async Task OnInitializedAsync()
