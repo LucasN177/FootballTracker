@@ -62,7 +62,7 @@
         <!-- Match Day Selector -->
         <div class="d-flex align-center mb-4">
             <MudText Class="mr-3">Spieltag:</MudText>
-            <MudSelect @bind-Value="SelectedMatchDay" T="int" Variant="Variant.Outlined" Dense="true" Class="mr-2" Style="max-width: 120px;">
+            <MudSelect @bind-Value="SelectedMatchDay" T="int" Variant="Variant.Outlined" Dense="true" Class="mr-2" Style="max-width: 170px;">
                 @foreach (var matchDay in Enumerable.Range(1, 34))
                 {
                     <MudSelectItem Value="matchDay">@($"{matchDay}. Spieltag")</MudSelectItem>
@@ -91,7 +91,7 @@
 
     private bool IsLoading { get; set; } = true;
     private int ActiveTabIndex { get; set; } = 0;
-    private int SelectedMatchDay { get; set; } = 2;
+    private int SelectedMatchDay { get; set; } = 3;
     private DateTime LastUpdateTime { get; set; } = DateTime.Now;
     
 
