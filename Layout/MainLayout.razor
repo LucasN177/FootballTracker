@@ -1,4 +1,4 @@
-﻿@using FootballTracker.Core.Models
+@using FootballTracker.Core.Models
 @using FootballTracker.Services
 @inherits LayoutComponentBase
 @inject AppStateService AppStateService
@@ -98,7 +98,7 @@
         -->
         <MudNavMenu Class="pa-2" >
     <!-- Dashboard -->
-    <MudNavLink Href="/" 
+    <MudNavLink Href="" 
                 Icon="@Icons.Material.Filled.Dashboard"
                 IconColor="Color.Primary"
                 Match="NavLinkMatch.All">
@@ -113,21 +113,21 @@
     </MudNavLink>
     
     <!-- Spieltage -->
-    <MudNavLink Href="/Spieltage" 
+    <MudNavLink Href="Spieltage" 
                 Icon="@Icons.Material.Filled.CalendarMonth"
                 IconColor="Color.Info">
         Spieltage
     </MudNavLink>
     
     <!-- Teams -->
-    <MudNavLink Href="/Teams" 
+    <MudNavLink Href="Teams" 
                 Icon="@Icons.Material.Filled.Groups"
                 IconColor="Color.Warning">
         Teams
     </MudNavLink>
     
     <!-- Spieler -->
-    <MudNavLink Href="/Spieler" 
+    <MudNavLink Href="Spieler" 
                 Icon="@Icons.Material.Filled.Person"
                 IconColor="Color.Tertiary">
         Spieler
