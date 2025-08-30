@@ -29,10 +29,12 @@
                   
                   Class="mr-4" 
                   ObjectFit="ObjectFit.Contain" />
+        <MudHidden Breakpoint="Breakpoint.SmAndDown">
+            <MudText Typo="Typo.h5" Class="mr-6 font-weight-bold">
+                Bundesliga Tracker
+            </MudText>    
+        </MudHidden>
         
-        <MudText Typo="Typo.h5" Class="mr-6 font-weight-bold">
-            Bundesliga Tracker
-        </MudText>
         
         <MudSpacer />
         
@@ -170,10 +172,18 @@
     <!-- Favoriten -->
     <MudDivider Class="my-2" />
     
-    <MudText Typo="Typo.caption" 
-             Class="px-4 py-2 text-muted font-weight-bold">
-        FAVORITEN
-    </MudText>
+    @if (AppStateService.IsDrawerOpen)
+    {
+        <MudText Typo="Typo.caption" 
+                 Class="px-4 py-2 text-muted font-weight-bold">
+            FAVORITEN
+        </MudText>    
+    }
+    else
+    {
+        <MudDivider size="3"/>
+    }
+    
     
     <MudNavLink Href="/favoriten/teams" 
                 Icon="@Icons.Material.Filled.Favorite"
@@ -189,17 +199,19 @@
 </MudNavMenu>
         
         <MudSpacer />
-        
-        <!-- Footer in Drawer -->
-        <div class="pa-4">
-            <MudDivider Class="mb-4" />
-            <MudText Color="Color.Secondary" Typo="Typo.caption" Class="text-center text-muted">
-                Bundesliga Tracker v0.1
-            </MudText>
-            <MudText Color="Color.Secondary" Typo="Typo.caption" Class="text-center text-muted">
-                © 2025
-            </MudText>
-        </div>
+        @if (AppStateService.IsDrawerOpen)
+        {
+            <!-- Footer in Drawer -->
+            <div class="pa-4">
+                <MudDivider Class="mb-4" />
+                <MudText Color="Color.Secondary" Typo="Typo.caption" Class="text-center text-muted">
+                    Bundesliga Tracker v0.1
+                </MudText>
+                <MudText Color="Color.Secondary" Typo="Typo.caption" Class="text-center text-muted">
+                    © 2025
+                </MudText>
+            </div>    
+        }
         
         </MudDrawer>
 

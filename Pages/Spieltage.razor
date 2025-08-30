@@ -1,6 +1,544 @@
 @page "/Spieltage"
 <h3>Spieltage</h3>
 
+@using FootballTracker.Core.Models
+@using FootballTracker.Core.Models.Extensions
+@using FootballTracker.Services
+@using MudBlazor
+@inject GamesService GamesService
+
+<PageTitle>Bundesliga Spieltage</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Header Section -->
+    <MudPaper Class="pa-6 mb-4" Elevation="2">
+        <div class="d-flex align-center justify-space-between flex-wrap">
+            <div class="d-flex align-center mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Size="Size.Large" Class="mr-3" />
+                <div>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">
+                        <strong>Bundesliga Spieltage</strong>
+                    </MudText>
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                        Saison 2025/2026 • 1. Fußball-Bundesliga
+                    </MudText>
+                </div>
+            </div>
+            
+            <div class="d-flex align-center gap-2 mb-2">
+                <MudButton Variant="Variant.Outlined" 
+                          StartIcon="@Icons.Material.Filled.Refresh" 
+                          Color="Color.Primary"
+                          OnClick="RefreshCurrentData"
+                          Disabled="IsLoading">
+                    Aktualisieren
+                </MudButton>
+                
+                <MudButton Variant="Variant.Filled" 
+                          StartIcon="@Icons.Material.Filled.Today" 
+                          Color="Color.Success"
+                          OnClick="LoadCurrentMatchDay">
+                    Aktueller Spieltag
+                </MudButton>
+            </div>
+        </div>
+    </MudPaper>
+
+    <!-- Quick Stats -->
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Info" Size="Size.Large" Class="mr-3" />
+                    <div>
+                        <MudText Typo="Typo.h6">@CurrentMatchDay</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Aktueller Spieltag</MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Success" Size="Size.Large" Class="mr-3" />
+                    <div>
+                        <MudText Typo="Typo.h6">@TotalFinishedGames</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Beendete Spiele</MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Warning" Size="Size.Large" Class="mr-3" />
+                    <div>
+                        <MudText Typo="Typo.h6">@TotalUpcomingGames</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Anstehende Spiele</MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.LiveTv" Color="Color.Error" Size="Size.Large" Class="mr-3" />
+                    <div>
+                        <MudText Typo="Typo.h6">@TotalLiveGames</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Live Spiele</MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Match Day Selector and Filter -->
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudGrid AlignItems="Center">
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect @bind-Value="SelectedMatchDay" 
+                          T="int" 
+                          Label="Spieltag auswählen"
+                          Variant="Variant.Outlined" 
+                          Dense="true"
+                          OnSelectionChanged="OnMatchDayChanged">
+                    @for (int i = 1; i <= 34; i++)
+                    {
+                        <MudSelectItem Value="i">@($"{i}. Spieltag")</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect @bind-Value="SelectedFilter" 
+                          T="string" 
+                          Label="Filter"
+                          Variant="Variant.Outlined" 
+                          Dense="true">
+                    <MudSelectItem Value="@("all")">Alle Spiele</MudSelectItem>
+                    <MudSelectItem Value="@("today")">Heute</MudSelectItem>
+                    <MudSelectItem Value="@("live")">Live</MudSelectItem>
+                    <MudSelectItem Value="@("finished")">Beendet</MudSelectItem>
+                    <MudSelectItem Value="@("upcoming")">Anstehend</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField @bind-Value="SearchTerm" 
+                             Label="Team suchen" 
+                             Variant="Variant.Outlined" 
+                             Dense="true"
+                             Adornment="Adornment.Start" 
+                             AdornmentIcon="@Icons.Material.Filled.Search"
+                             Clearable="true" />
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="2">
+                <MudSwitch T="bool" @bind-Checked="ShowOnlyFavorites" 
+                          Label="Nur Favoriten" 
+                          Color="Color.Primary" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Games Content -->
+    @if (IsLoading)
+    {
+        <MudPaper Class="pa-6" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-4">Lade Spieldaten...</MudText>
+            <MudGrid>
+                @for (int i = 0; i < 9; i++)
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudPaper>
+    }
+    else if (HasError)
+    {
+        <MudPaper Class="pa-6" Elevation="1">
+            <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mb-4">
+                <MudText Typo="Typo.body1">Fehler beim Laden der Spieldaten: @ErrorMessage</MudText>
+            </MudAlert>
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Refresh"
+                      OnClick="LoadMatchDay">
+                Erneut versuchen
+            </MudButton>
+        </MudPaper>
+    }
+    else if (!FilteredGames.Any())
+    {
+        <MudPaper Class="pa-6" Elevation="1">
+            <div class="text-center">
+                <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
+                <MudText Typo="Typo.h6" Color="Color.Secondary">Keine Spiele gefunden</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Versuchen Sie andere Filter oder Suchbegriffe.
+                </MudText>
+            </div>
+        </MudPaper>
+    }
+    else
+    {
+        <!-- Games Grid -->
+        <MudGrid>
+            @foreach (var game in FilteredGames)
+            {
+                <MudItem xs="12" sm="6" lg="4">
+                    <GameDetailCard Game="game" OnFavoriteToggle="ToggleFavorite" IsFavorite="FavoriteTeams.Contains(game.Team1.TeamId) || FavoriteTeams.Contains(game.Team2.TeamId)" />
+                </MudItem>
+            }
+        </MudGrid>
+
+        <!-- Load More Button -->
+        @if (FilteredGames.Count < AllGames.Count)
+        {
+            <div class="text-center mt-6">
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Primary"
+                          OnClick="LoadMoreGames">
+                    Mehr anzeigen (@(AllGames.Count - FilteredGames.Count) weitere)
+                </MudButton>
+            </div>
+        }
+    }
+
+    <!-- Footer -->
+    <MudDivider Class="my-6" />
+    <div class="text-center pb-4">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Daten von OpenLigaDB • Letzte Aktualisierung: @LastUpdateTime.ToString("dd.MM.yyyy HH:mm:ss")
+        </MudText>
+    </div>
+</MudContainer>
+
 @code {
+    // Game Detail Card Component
+    private RenderFragment<(Game Game, EventCallback<Game> OnFavoriteToggle, bool IsFavorite)> GameDetailCard => 
+        context => __builder =>
+    {
+        var (game, onFavoriteToggle, isFavorite) = context;
+        var status = GetGameStatus(game);
+        var scoreDisplay = GetScoreDisplay(game);
+
+        <MudCard Elevation="2" Class="game-card">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <MudChip T="string" Color="@status.Color" 
+                                Size="Size.Small" 
+                                Variant="@status.Variant">
+                            @status.Text
+                        </MudChip>
+                        
+                        <MudIconButton Icon="@(isFavorite ? Icons.Material.Filled.Favorite : Icons.Material.Filled.FavoriteBorder)"
+                                      Color="@(isFavorite ? Color.Error : Color.Default)"
+                                      Size="Size.Small"
+                                      OnClick="() => onFavoriteToggle.InvokeAsync(game)" />
+                    </div>
+                </CardHeaderContent>
+            </MudCardHeader>
+            
+            <MudCardContent>
+                <!-- Teams -->
+                <div class="teams-container mb-4">
+                    <div class="team-section">
+                        @if (!string.IsNullOrEmpty(game.Team1?.LogoUrl))
+                        {
+                            <MudAvatar Size="Size.Large" Class="mb-2">
+                                <MudImage Src="@game.Team1.LogoUrl" Alt="@game.Team1.ShortName" ObjectFit="ObjectFit.Contain" />
+                            </MudAvatar>
+                        }
+                        <MudText Typo="Typo.body1" Align="Align.Center" Class="font-weight-medium">
+                            @game.Team1?.ShortName
+                        </MudText>
+                    </div>
+                    
+                    <div class="score-section">
+                        <MudText Typo="Typo.h4" Align="Align.Center" Color="Color.Primary" Class="font-weight-bold">
+                            @scoreDisplay
+                        </MudText>
+                        <MudText Typo="Typo.caption" Align="Align.Center" Color="Color.Secondary">
+                            @game.GetFormattedDateTime("dd.MM. HH:mm")
+                        </MudText>
+                    </div>
+                    
+                    <div class="team-section">
+                        @if (!string.IsNullOrEmpty(game.Team2?.LogoUrl))
+                        {
+                            <MudAvatar Size="Size.Large" Class="mb-2">
+                                <MudImage Src="@game.Team2.LogoUrl" Alt="@game.Team2.ShortName" ObjectFit="ObjectFit.Contain" />
+                            </MudAvatar>
+                        }
+                        <MudText Typo="Typo.body1" Align="Align.Center" Class="font-weight-medium">
+                            @game.Team2?.ShortName
+                        </MudText>
+                    </div>
+                </div>
+
+                <!-- Goals -->
+                @if (game.Goals?.Any() == true)
+                {
+                    <MudDivider Class="mb-3" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Size="Size.Small" Class="mr-1" />
+                        Tore
+                    </MudText>
+                    <MudStack Spacing="1">
+                        @foreach (var goal in game.Goals.OrderBy(g => g.MatchMinute))
+                        {
+                            <div class="goal-item">
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.caption">
+                                        <strong>@goal.MatchMinute'</strong> @goal.GoalGetterName
+                                        @if (goal.IsPenalty) { <MudIcon Icon="@Icons.Material.Filled.GpsFixed" Size="Size.Small" Title="Elfmeter" /> }
+                                        @if (goal.IsOwnGoal) { <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Title="Eigentor" Color="Color.Error" /> }
+                                    </MudText>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
+                                        @($"{goal.ScoreTeam1}:{goal.ScoreTeam2}")
+                                    </MudChip>
+                                </div>
+                            </div>
+                        }
+                    </MudStack>
+                }
+            </MudCardContent>
+            
+            <MudCardActions>
+                <MudButton Variant="Variant.Text" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Info"
+                          Size="Size.Small"
+                          OnClick="() => ShowGameDetails(game)">
+                    Details
+                </MudButton>
+                
+                @if (game.MatchIsFinished)
+                {
+                    <MudButton Variant="Variant.Text" 
+                              Color="Color.Secondary" 
+                              StartIcon="@Icons.Material.Filled.Assessment"
+                              Size="Size.Small">
+                        Statistiken
+                    </MudButton>
+                }
+            </MudCardActions>
+        </MudCard>
+    };
+
+    // Properties
+    private List<Game> AllGames { get; set; } = new();
+    private List<Game> FilteredGames { get; set; } = new();
+    private HashSet<int> FavoriteTeams { get; set; } = new();
     
+    private bool IsLoading { get; set; } = true;
+    private bool HasError { get; set; } = false;
+    private string ErrorMessage { get; set; } = "";
+    
+    private int SelectedMatchDay { get; set; } = 2;
+    private int CurrentMatchDay { get; set; } = 2;
+    private string SelectedFilter { get; set; } = "all";
+    private string SearchTerm { get; set; } = "";
+    private bool ShowOnlyFavorites { get; set; } = false;
+    
+    private DateTime LastUpdateTime { get; set; } = DateTime.Now;
+    
+    // Computed Properties
+    private int TotalFinishedGames => AllGames.Count(g => g.MatchIsFinished);
+    private int TotalUpcomingGames => AllGames.Count(g => !g.MatchIsFinished && g.MatchDateTime > DateTime.Now);
+    private int TotalLiveGames => AllGames.Count(g => !g.MatchIsFinished && g.MatchDateTime <= DateTime.Now);
+
+    // Lifecycle
+    protected override async Task OnInitializedAsync()
+    {
+        CurrentMatchDay = GetEstimatedCurrentMatchDay();
+        SelectedMatchDay = CurrentMatchDay;
+        await LoadMatchDay();
+        ApplyFilters();
+    }
+
+    // Methods
+    private async Task LoadMatchDay()
+    {
+        IsLoading = true;
+        HasError = false;
+        StateHasChanged();
+
+        try
+        {
+            AllGames = await GamesService.GetMatchDataAsync("bl1", 2025, SelectedMatchDay);
+            LastUpdateTime = DateTime.Now;
+            ApplyFilters();
+            
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnMatchDayChanged()
+    {
+        await LoadMatchDay();
+    }
+
+    private async Task RefreshCurrentData()
+    {
+        await LoadMatchDay();
+    }
+
+    private async Task LoadCurrentMatchDay()
+    {
+        SelectedMatchDay = CurrentMatchDay;
+        await LoadMatchDay();
+    }
+
+    private void ApplyFilters()
+    {
+        var filtered = AllGames.AsEnumerable();
+
+        // Filter by category
+        filtered = SelectedFilter switch
+        {
+            "today" => filtered.Where(g => g.MatchDateTime.Date == DateTime.Today),
+            "live" => filtered.Where(g => !g.MatchIsFinished && g.MatchDateTime <= DateTime.Now),
+            "finished" => filtered.Where(g => g.MatchIsFinished),
+            "upcoming" => filtered.Where(g => !g.MatchIsFinished && g.MatchDateTime > DateTime.Now),
+            _ => filtered
+        };
+
+        // Search filter
+        if (!string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            var searchLower = SearchTerm.ToLower();
+            filtered = filtered.Where(g => 
+                g.Team1.Name.ToLower().Contains(searchLower) ||
+                g.Team1.ShortName.ToLower().Contains(searchLower) ||
+                g.Team2.Name.ToLower().Contains(searchLower) ||
+                g.Team2.ShortName.ToLower().Contains(searchLower));
+        }
+
+        // Favorites filter
+        if (ShowOnlyFavorites)
+        {
+            filtered = filtered.Where(g => 
+                FavoriteTeams.Contains(g.Team1.Id) || 
+                FavoriteTeams.Contains(g.Team2.Id));
+        }
+
+        FilteredGames = filtered.OrderBy(g => g.MatchDateTime).ToList();
+        StateHasChanged();
+    }
+
+    private void ToggleFavorite(Game game)
+    {
+        // Simple implementation - could be enhanced to store in local storage
+        var team1IsFav = FavoriteTeams.Contains(game.Team1.Id);
+        var team2IsFav = FavoriteTeams.Contains(game.Team2.Id);
+
+        if (team1IsFav || team2IsFav)
+        {
+            FavoriteTeams.Remove(game.Team1.Id);
+            FavoriteTeams.Remove(game.Team2.Id);
+        }
+        else
+        {
+            FavoriteTeams.Add(game.Team1.Id);
+            FavoriteTeams.Add(game.Team2.Id);
+        }
+
+        ApplyFilters();
+    }
+
+    private void ShowGameDetails(Game game)
+    {
+        // TODO: Implement game details dialog or navigation
+    }
+
+    private void LoadMoreGames()
+    {
+        // Implementation for pagination if needed
+    }
+
+    private (string Text, Color Color, Variant Variant) GetGameStatus(Game game)
+    {
+        if (game.MatchIsFinished)
+            return ("Beendet", Color.Success, Variant.Filled);
+
+        if (game.MatchDateTime > DateTime.Now)
+            return ("Angesetzt", Color.Info, Variant.Outlined);
+
+        return ("Live", Color.Error, Variant.Filled);
+    }
+
+    private string GetScoreDisplay(Game game)
+    {
+        if (game.FinalResult != null)
+            return $"{game.FinalResult.PointsTeam1} : {game.FinalResult.PointsTeam2}";
+
+        if (game.MatchDateTime > DateTime.Now)
+            return game.MatchDateTime.ToString("HH:mm");
+
+        return "- : -";
+    }
+
+    private int GetEstimatedCurrentMatchDay()
+    {
+        var seasonStart = new DateTime(2025, 8, 1);
+        var weeksSinceStart = (DateTime.Now - seasonStart).Days / 7;
+        return Math.Max(1, Math.Min(34, (int)weeksSinceStart + 1));
+    }
 }
+
+<style>
+    .game-card {
+        transition: all 0.2s ease-in-out;
+        height: 100%;
+    }
+
+    .game-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .teams-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .team-section {
+        flex: 1;
+        text-align: center;
+    }
+
+    .score-section {
+        flex: 0 0 auto;
+        margin: 0 20px;
+        text-align: center;
+    }
+
+    .goal-item {
+        padding: 4px 0;
+        border-left: 3px solid blue;
+        padding-left: 8px;
+        margin: 4px 0;
+    }
+
+        .score-section {
+            margin: 16px 0;
+        }
+</style>

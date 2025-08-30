@@ -27,6 +27,7 @@ public class TabellenService
             {
                 TabellenPlatz = platz++,
                 Name = t.teamName,
+                ShortName = t.shortName,
                 LogoUrl = t.teamIconUrl,
                 Spiele = t.matches,
                 Siege = t.won,

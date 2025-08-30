@@ -15,6 +15,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 
 builder.Services.AddSingleton<AppStateService>();
 builder.Services.AddSingleton<TabellenService>();
+builder.Services.AddSingleton<GamesService>();
 //builder.Services.AddSingleton<NavigationManager>();
 
 await builder.Build().RunAsync();

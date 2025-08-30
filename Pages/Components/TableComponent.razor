@@ -1,0 +1,28 @@
+@using FootballTracker.Services
+@inject TabellenService TabellenService
+@inject AppStateService AppStateService
+
+    <MudPaper Class="pa-6">
+        <MudText Typo="Typo.h4" Class="mb-4 font-weight-bold" Style="margin-top: 30px">Tabelle
+        </MudText>
+
+        <MudTable Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true">
+            <HeaderContent>
+                <MudTh>Platz</MudTh>
+                <MudTh>Team</MudTh>
+                <MudTh>Diff</MudTh>
+                <MudTh>Punkte</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Platz">@context.TabellenPlatz</MudTd>
+                <MudTd DataLabel="Team">
+                    <MudImage Height="20" Width="20" Class="mr-2" Src="@context.LogoUrl" Style="object-fit: contain" />
+                    @context.ShortName
+                </MudTd>
+                <MudTd DataLabel="Diff">@context.Differenz</MudTd>
+                <MudTd DataLabel="Punkte" Class="font-weight-bold">
+                    @context.Punkte
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>    
