@@ -14,7 +14,7 @@ public class Goal
     public int ScoreTeam2 { get; set; }
 
     [JsonPropertyName("matchMinute")]
-    public int MatchMinute { get; set; }
+    public int? MatchMinute { get; set; }
 
     [JsonPropertyName("goalGetterID")]
     public int GoalGetterId { get; set; }
