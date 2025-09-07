@@ -1,9 +1,81 @@
+@using FootballTracker.Core.Models
+@using FootballTracker.Services
+@inject TeamService TeamService
+@inject TabellenService TabellenService
 <MudPaper Class="pa6">
-    <MudChart ChartType="ChartType.Pie" InputData="@data" @bind-SelectedIndex="Index" InputLabels="@labels" Width="300px" Height="300px" Style="margin: 30px"/>
+    @if (teams.Any())
+    {
+        <MudSelect T="Team" 
+                   @bind-Value="selectedTeam" 
+                   Variant="Variant.Outlined" 
+                   Immediate="true">
+
+            @foreach (var team in teams)
+            {
+                <MudSelectItem T="Team" Value="@team">
+                    <MudStack Row="true">
+                        <MudImage Width="25" Height="25" Src="@team.LogoUrl"/>
+                        <MudText>@team.Name</MudText>
+                    </MudStack>
+                </MudSelectItem>
+            }
+        </MudSelect>
+    }
+    
+    <MudChart ChartType="ChartType.Pie" 
+              InputData="@data" 
+              @bind-SelectedIndex="Index" 
+              InputLabels="@labels" 
+              Width="300px" 
+              Height="300px" 
+              Style="margin: 30px"
+              ChartOptions="@chartOptions"/>
 </MudPaper>
 
 @code {
+    private List<Team> teams = new();
+    private Team _selectedTeam;
     private int Index = -1;
-    double[] data = { 7, 5 ,6 };
+    double[] data;
     string[] labels = { "Sieg", "Unentschieden", "Niederlage" };
+    private ChartOptions chartOptions = new()
+    {
+        ChartPalette = new[] { "#4CAF50", "#FFEB3B", "#F44336" } 
+        // Grün, Gelb, Rot
+    };
+
+    protected override Task OnInitializedAsync()
+    {
+        setTeams();
+        return base.OnInitializedAsync();
+    }
+
+    private Team selectedTeam
+    {
+        get => _selectedTeam;
+        set
+        {
+            _selectedTeam = value;
+            _ = updateChart(); // fire & forget
+        }
+    }
+
+    private async Task updateChart()
+    {
+        if (selectedTeam == null) return;
+
+        data = new[]
+        {
+            Convert.ToDouble(selectedTeam.Siege),
+            Convert.ToDouble(selectedTeam.Unentschieden),
+            Convert.ToDouble(selectedTeam.Niederlagen)
+        };
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void setTeams()
+    {
+        teams = await TabellenService.GetBundesligaTabelle(2025);
+        selectedTeam = teams.FirstOrDefault();  
+    }
 }

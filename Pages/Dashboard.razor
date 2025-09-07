@@ -5,12 +5,18 @@
 
 <MudGrid Style="margin-top: 40px">
     <MudItem xs="12" sm="12" md="6">
-        <TableComponent/>
+        <MudItem xs="12">
+            <TableComponent/>   
+        </MudItem>
+        <MudItem xs="12" Style="margin-top: 20px">
+            <GamesChart/>  
+        </MudItem>
+        
     </MudItem>
-    <MudItem xs="12" sm="6">
-        <Ergebnisse/>
+    <MudItem xs="12" sm="12" md="6">
+        <MudItem xs="12" sm="12" md="12">
+            <Ergebnisse/>
+        </MudItem>
     </MudItem>
-    <MudItem>
-        <GamesChart/>
-    </MudItem>
+    
 </MudGrid>

@@ -43,6 +43,7 @@
         <MudSpacer />
         
         <!-- Season Selector -->
+        <MudHidden Breakpoint="Breakpoint.SmAndDown">
         <MudSelect T="Season"
                    @bind-Value="AppStateService.SelectedSeason"
                    Variant="Variant.Outlined"
@@ -55,6 +56,7 @@
                 <MudSelectItem T="Season" Value="season">@season.Name</MudSelectItem>
             }
         </MudSelect>
+        </MudHidden>
         
         <!-- Dark Mode Toggle -->
         <MudIconButton Icon="@(AppStateService.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
@@ -63,7 +65,7 @@
         
         <!-- Settings -->
         <MudIconButton Icon="@Icons.Material.Filled.Settings" 
-                       Color="Color.Inherit" />
+                       Color="Color.Inherit" Href="Settings"/>
     </MudAppBar>
 
     <!-- Navigation Drawer -->
