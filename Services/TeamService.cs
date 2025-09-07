@@ -8,7 +8,7 @@ public class TeamService
     private readonly HttpClient _httpClient = new();
     public async Task<List<Team>> GetAllTeams(int year)
     {
-        var apiUrl = "https://api.openligadb.de/getavailableteams/bl1/2025";
+        var apiUrl = $"https://api.openligadb.de/getavailableteams/bl1/{year}";
         var apiTeams = await _httpClient.GetFromJsonAsync<List<ApiTeamResponse>>(apiUrl);
 
         if (apiTeams == null) 
@@ -24,13 +24,6 @@ public class TeamService
                 Name = t.teamName,
                 ShortName = t.shortName,
                 LogoUrl = t.teamIconUrl,
-                Spiele = t.matches,
-                Siege = t.won,
-                Unentschieden = t.draw,
-                Niederlagen = t.lost,
-                Tore = t.goals,
-                Gegentore = t.opponentGoals,
-                Punkte = t.points
             });
         }
         return teams;
