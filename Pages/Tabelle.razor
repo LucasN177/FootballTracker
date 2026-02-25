@@ -1,5 +1,4 @@
 @page "/Tabelle"
-@using FootballTracker
 @using FootballTracker.Core.Models
 @using FootballTracker.Services
 @inject TabellenService TabellenService
@@ -46,8 +45,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine(AppStateService.SelectedSeason.year);
-        _teams = await TabellenService.GetBundesligaTabelle(AppStateService.SelectedSeason.year);
+        Console.WriteLine(AppStateService.SelectedSeason.Year);
+        _teams = await TabellenService.GetBundesligaTabelle(AppStateService.SelectedSeason.Year);
     }
 }
 

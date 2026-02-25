@@ -6,7 +6,7 @@
 @using FootballTracker.Services
 @using MudBlazor
 @using FootballTracker.Pages.Components
-@inject GamesService GamesService
+@inject GameService GameService
 
 <PageTitle>Bundesliga Spieltage</PageTitle>
 
@@ -262,7 +262,7 @@
 
         try
         {
-            AllGames = await GamesService.GetMatchDataAsync("bl1", 2025, SelectedMatchDay);
+            AllGames = await GameService.GetMatchDataAsync("bl1", 2025, SelectedMatchDay);
             LastUpdateTime = DateTime.Now;
             ApplyFilters();
             

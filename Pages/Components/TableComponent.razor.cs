@@ -11,7 +11,7 @@ public partial class TableComponent : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        _teams = await TabellenService.GetBundesligaTabelle(AppStateService.SelectedSeason.year);
+        _teams = await TabellenService.GetBundesligaTabelle(AppStateService.SelectedSeason.Year);
         _teams = _teams.Where(x => x.TabellenPlatz < 6).ToList();
     }
 }

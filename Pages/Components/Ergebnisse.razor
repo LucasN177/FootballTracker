@@ -1,10 +1,3 @@
-@using System.Diagnostics
-@using FootballTracker.Core.Models
-@using FootballTracker.Core.Models.Extensions
-@using FootballTracker.Services
-@using MudBlazor
-@inject GamesService GamesService
-
 <MudPaper Class="pa-6" Elevation="3">
     <div class="d-flex align-center justify-space-between mb-6">
         <div class="d-flex align-center">
@@ -33,43 +26,36 @@
     {
         <!-- Tab Navigation -->
         <MudTabs @bind-ActivePanelIndex="ActiveTabIndex" Color="Color.Primary" SliderColor="Color.Primary" Class="mb-4">
-            <MudTabPanel Text="@GetTabText("today", TodaysGames.Count)" BadgeData="@TodaysGames.Count" BadgeColor="Color.Primary">
-                <GamesList Games="TodaysGames" />
-            </MudTabPanel>
-            <MudTabPanel Text="@GetTabText("upcoming", UpcomingGames.Count)" BadgeData="@UpcomingGames.Count" BadgeColor="Color.Info">
-                <GamesList Games="UpcomingGames" />
-            </MudTabPanel>
-            <MudTabPanel Text="@GetTabText("finished", FinishedGames.Count)" BadgeData="@FinishedGames.Count" BadgeColor="Color.Success">
-                <GamesList Games="FinishedGames" />
-            </MudTabPanel>
             <MudTabPanel Text="@GetTabText("all", AllGames.Count)" BadgeData="@AllGames.Count" BadgeColor="Color.Default">
                 <GamesList Games="AllGames" />
             </MudTabPanel>
+            <MudTabPanel Text="@GetTabText("today", TodaysGames.Count)" BadgeData="@TodaysGames.Count" BadgeColor="Color.Primary">
+                <GamesList Games="TodaysGames"/>
+            </MudTabPanel>
+            <MudTabPanel Text="@GetTabText("upcoming", UpcomingGames.Count)" BadgeData="@UpcomingGames.Count" BadgeColor="Color.Info">
+                <GamesList Games="UpcomingGames"/>
+            </MudTabPanel>
+            <MudTabPanel Text="@GetTabText("finished", FinishedGames.Count)" BadgeData="@FinishedGames.Count" BadgeColor="Color.Success">
+                <GamesList Games="FinishedGames"/>
+            </MudTabPanel>
         </MudTabs>
-
-        <!-- Refresh Button -->
-        <div class="d-flex justify-end mb-4">
-            <MudButton Variant="Variant.Outlined" 
-                      StartIcon="@Icons.Material.Filled.Refresh" 
-                      Color="Color.Primary" 
-                      Size="Size.Small"
-                      OnClick="RefreshData"
-                      Disabled="IsLoading">
-                Aktualisieren
-            </MudButton>
-        </div>
 
         <!-- Match Day Selector -->
         <div class="d-flex align-center mb-4">
             <MudText Class="mr-3">Spieltag:</MudText>
-            <MudSelect @bind-Value="SelectedMatchDay" T="int" Variant="Variant.Outlined" Dense="true" Class="mr-2" Style="max-width: 170px;">
+            <MudSelect @bind-Value="SelectedMatchDay" T="int" Variant="Variant.Outlined" Dense="true" Class="mr-2" Style="max-width: 170px;" OnClose="@LoadMatchDay">
                 @foreach (var matchDay in Enumerable.Range(1, 34))
                 {
                     <MudSelectItem Value="matchDay">@($"{matchDay}. Spieltag")</MudSelectItem>
                 }
             </MudSelect>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="LoadMatchDay">
-                Laden
+            <MudButton Variant="Variant.Outlined" 
+                       StartIcon="@Icons.Material.Filled.Refresh" 
+                       Color="Color.Primary" 
+                       Size="Size.Small"
+                       OnClick="RefreshData"
+                       Disabled="IsLoading">
+                Aktualisieren
             </MudButton>
         </div>
     }
@@ -80,103 +66,3 @@
         Daten von OpenLigaDB • Letzte Aktualisierung: @LastUpdateTime.ToString("HH:mm:ss")
     </MudText>
 </MudPaper>
-
-@code {
-
-    // Properties
-    private List<Game> AllGames { get; set; } = new();
-    private List<Game> TodaysGames => AllGames.Where(IsToday).ToList();
-    private List<Game> UpcomingGames => AllGames.Where(IsUpcoming).ToList();
-    private List<Game> FinishedGames => AllGames.Where(g => g.MatchIsFinished).ToList();
-
-    private bool IsLoading { get; set; } = true;
-    private int ActiveTabIndex { get; set; } = 0;
-    private int SelectedMatchDay { get; set; } = 2;
-    private DateTime LastUpdateTime { get; set; } = DateTime.Now;
-    
-
-    // Lifecycle
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadMatchDay();
-    }
-
-    // Methods
-    private async Task LoadMatchDay()
-    {
-        IsLoading = true;
-        try
-        {
-            AllGames = await GamesService.GetMatchDataAsync("bl1", 2025, SelectedMatchDay);
-            LastUpdateTime = DateTime.Now;
-        }
-        catch (Exception ex)
-        {
-            // TODO: Show error message to user
-        }
-        finally
-        {
-            IsLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task RefreshData()
-    {
-        await LoadMatchDay();
-    }
-
-    private string GetTabText(string tabType, int count)
-    {
-        return tabType switch
-        {
-            "today" => $"Heute ({count})",
-            "upcoming" => $"Anstehend ({count})",
-            "finished" => $"Beendet ({count})",
-            "all" => $"Alle ({count})",
-            _ => $"Tab ({count})"
-        };
-    }
-
-    private (string Text, Color Color, Variant Variant) GetGameStatus(Game game)
-    {
-        if (game.MatchIsFinished)
-            return ("Beendet", Color.Success, Variant.Filled);
-
-        if (game.MatchDateTime > DateTime.Now)
-            return ("Angesetzt", Color.Info, Variant.Outlined);
-
-        return ("Live", Color.Error, Variant.Filled);
-    }
-
-    private string GetScoreDisplay(Game game)
-    {
-        if (game.FinalResult != null)
-            return $"{game.FinalResult.PointsTeam1} : {game.FinalResult.PointsTeam2}";
-
-        if (game.IsUpcoming)
-            return game.MatchDateTime.ToString("HH:mm");
-
-        return "- : -";
-    }
-
-    private string GetGoalIcon(Goal goal)
-    {
-        if (goal.IsOwnGoal) return Icons.Material.Filled.SportsSoccer;
-        if (goal.IsPenalty) return Icons.Material.Filled.GpsFixed;
-        return Icons.Material.Filled.SportsSoccer;
-    }
-
-    private bool IsToday(Game game) => game.MatchDateTime.Date == DateTime.Today;
-    private bool IsUpcoming(Game game) => !game.MatchIsFinished && game.MatchDateTime > DateTime.Now;
-}
-
-<style>
-    .hover-card {
-        transition: all 0.2s ease-in-out;
-    }
-    .hover-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-</style>

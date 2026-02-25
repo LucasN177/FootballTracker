@@ -1,0 +1,155 @@
+@page "/TeamDetailsPage/{TeamId}"
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+
+    <!-- HERO HEADER -->
+    <MudPaper Class="hero-section d-flex align-end" Elevation="0" >
+        <MudContainer MaxWidth="MaxWidth.Large">
+            <MudGrid AlignItems="Center" Class="pb-6">
+                
+                    
+                
+
+                <MudItem xs="12" md="10">
+                    <MudText Typo="Typo.h3" Class="fw-bold white--text" Color="Color.Dark">
+                        @Team.Name
+                    </MudText>
+                    <MudText Typo="Typo.subtitle1" Class="white--text">
+                        Platz: @Team.TabellenPlatz • Bundesliga
+                    </MudText>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
+    </MudPaper>
+
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-n8">
+
+        <!-- TEAM INFOS + STATS -->
+        <MudGrid Spacing="3">
+
+            <!-- LEFT COLUMN -->
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-6 rounded-xl" Elevation="4">
+                    <MudText Typo="Typo.h5" Class="mb-4 fw-bold">
+                        Team Informationen
+                    </MudText>
+
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudText><b>Stadion:</b> Muster Arena</MudText>
+                            <MudText><b>Kapazität:</b> 52.000</MudText>
+                            <MudText><b>Trainer:</b> Max Mustermann</MudText>
+                        </MudItem>
+
+                        <MudItem xs="6">
+                            <MudText><b>Liga:</b> Bundesliga</MudText>
+                            <MudText><b>Letzte Saison:</b> 3. Platz</MudText>
+                            <MudText><b>Farben:</b> Rot / Weiß</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
+
+            <!-- STATS CARDS -->
+            <MudItem xs="12" md="4">
+                <MudGrid Spacing="2">
+
+                    <MudItem xs="4">
+                        <MudPaper Class="pa-4 stat-card" Elevation="4">
+                            <MudText Typo="Typo.h4" Align="Align.Center">@Team.Siege</MudText>
+                            <MudText Align="Align.Center">Siege</MudText>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="4">
+                        <MudPaper Class="pa-4 stat-card" Elevation="4">
+                            <MudText Typo="Typo.h4" Align="Align.Center">@Team.Unentschieden</MudText>
+                            <MudText Align="Align.Center">Remis</MudText>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="4">
+                        <MudPaper Class="pa-4 stat-card" Elevation="4">
+                            <MudText Typo="Typo.h4" Align="Align.Center">@Team.Niederlagen</MudText>
+                            <MudText Align="Align.Center">Niederlagen</MudText>
+                        </MudPaper>
+                    </MudItem>
+
+                </MudGrid>
+            </MudItem>
+
+        </MudGrid>
+
+        <!-- SPIELER GRID -->
+        <MudPaper Class="pa-6 mt-6 rounded-xl" Elevation="4">
+            <MudText Typo="Typo.h5" Class="mb-4 fw-bold">
+                Kader
+            </MudText>
+
+            <MudGrid Spacing="3">
+                @foreach (var player in Players)
+                {
+                    <MudItem xs="12" sm="6" md="4" lg="3">
+                        <MudCard Class="rounded-xl">
+                            <MudCardMedia Image="@player.Image" Height="200" />
+                            <MudCardContent>
+                                <MudText Typo="Typo.subtitle1" Class="fw-bold">
+                                    @player.Name
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    @player.Position
+                                </MudText>
+                                <MudChip T="int" Class="mt-2" Color="Color.Primary" Variant="Variant.Filled">
+                                    #@player.Number
+                                </MudChip>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudPaper>
+
+        <!-- LETZTE SPIELE -->
+        <MudPaper Class="pa-6 mt-6 mb-10 rounded-xl" Elevation="4">
+            <MudText Typo="Typo.h5" Class="mb-4 fw-bold">
+                Letzte Spiele
+            </MudText>
+
+            <MudTimeline>
+                @foreach (var match in Matches)
+                {
+                    <MudTimelineItem Color="Color.Primary">
+                        <MudText Typo="Typo.subtitle2">@match.MatchDateTime</MudText>
+                        <MudText>@match.Team1 vs @match.Team2</MudText>
+                        <MudChip T="string" Color="Color.Secondary" Variant="Variant.Filled">
+                            @match.FinalResult
+                        </MudChip>
+                    </MudTimelineItem>
+                }
+            </MudTimeline>
+        </MudPaper>
+
+    </MudContainer>
+</MudContainer>
+
+
+<style>
+    .hero-section {
+        height: 320px;
+        background: linear-gradient(rgba(0,0,0,.1), rgba(0,0,0,.1)), url("@Team.LogoUrl");
+        background-size: cover;
+        background-position: center;
+    }
+
+    .rounded-xl {
+        border-radius: 20px;
+    }
+
+    .stat-card {
+        text-align: center;
+        transition: all .2s ease-in-out;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+    }
+</style>

@@ -4,6 +4,7 @@ namespace FootballTracker.Core.Models;
 
 public class Team
 {
+    [JsonPropertyName("teamInfoId")]
     public int Id { get; set; }
     public int TabellenPlatz { get; set; }
     public string Name { get; set; } = string.Empty;
