@@ -1,4 +1,5 @@
 @page "/TeamDetailsPage/{TeamId}"
+@using FootballTracker.Core.Models
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
 
     <!-- HERO HEADER -->
@@ -117,13 +118,19 @@
             <MudTimeline>
                 @foreach (var match in Matches)
                 {
+                    @if (match.FinalResult != null)
+                    {
+                        match.MatchResults.Add(new MatchResult(){ResultTypeId = 2});
+                    }
+
                     <MudTimelineItem Color="Color.Primary">
-                        <MudText Typo="Typo.subtitle2">@match.MatchDateTime</MudText>
-                        <MudText>@match.Team1.ShortName vs @match.Team2.ShortName</MudText>
-                        <MudChip T="string" Color="Color.Secondary" Variant="Variant.Filled">
-                            @match.FinalResult.PointsTeam1 : @match.FinalResult.PointsTeam2
-                        </MudChip>
-                    </MudTimelineItem>
+                            <MudText Typo="Typo.subtitle2">@match.MatchDateTime</MudText>
+                            <MudText>@match.Team1.ShortName vs @match.Team2.ShortName</MudText>
+                            <MudChip T="string" Color="@GetResultColor(match)" Variant="Variant.Filled">
+                                @match.DisplayResult
+                            </MudChip>
+                            </MudTimelineItem> 
+                    
                 }
             </MudTimeline>
         </MudPaper>

@@ -51,10 +51,9 @@ public class Game
 
         [JsonPropertyName("numberOfViewers")]
         public int? NumberOfViewers { get; set; }
-
-        // Computed Properties für einfacheren Zugriff
-        public MatchResult FinalResult => MatchResults?.FirstOrDefault(r => r.ResultTypeId == 2);
-        public MatchResult HalfTimeResult => MatchResults?.FirstOrDefault(r => r.ResultTypeId == 1);
+        
+        public MatchResult? FinalResult => MatchResults?.FirstOrDefault(r => r.ResultTypeId == 2);
+        public MatchResult? HalfTimeResult => MatchResults?.FirstOrDefault(r => r.ResultTypeId == 1);
         public string DisplayResult => FinalResult != null ? $"{FinalResult.PointsTeam1}:{FinalResult.PointsTeam2}" : "-:-";
         public bool IsToday => MatchDateTime.Date == DateTime.Today;
         public bool IsUpcoming => !MatchIsFinished && MatchDateTime > DateTime.Now;

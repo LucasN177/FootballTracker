@@ -50,8 +50,8 @@ public class TeamService
     
     public async Task<List<Game>?> GetGames(int teamId, int weekCountPast, int weekCountFuture)
     {
-        if(Games is not null && Games.Count != 0)
-            return Games;
+        //if(Games is not null && Games.Count != 0)
+            //return Games;
         var result =
             await _httpClient.GetFromJsonAsync<List<Game>>($"https://api.openligadb.de/getmatchesbyteamid/{teamId}/{weekCountPast}/{weekCountFuture}");
         if (result != null)
