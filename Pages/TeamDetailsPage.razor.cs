@@ -25,6 +25,7 @@ public partial class TeamDetailsPage : ComponentBase
         if(team != null)
             Team = team;
         Matches = await TeamService.GetGames(Team.Id, 5, 1);
+        Matches.Reverse();
     }
     
     private List<Player> Players = new()

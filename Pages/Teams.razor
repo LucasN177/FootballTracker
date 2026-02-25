@@ -2,6 +2,7 @@
 @using FootballTracker.Core.Models
 @using FootballTracker.Services
 @inject TeamService TeamService
+@inject TabellenService TabellenService
 <MudPaper Class="pa-6">
     <MudText Typo="Typo.h4" Class="mb-4 font-weight-bold" Style="margin-top: 30px">
         Teams
@@ -49,7 +50,8 @@
 
     private async void GetTeams(int yearLocal = 2025)
     {
-        _teams = await TeamService.GetAllTeams(yearLocal);
+        _teams = await TabellenService.GetBundesligaTabelle(yearLocal);
+        
         await InvokeAsync(StateHasChanged);
     }
 

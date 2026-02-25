@@ -119,9 +119,9 @@
                 {
                     <MudTimelineItem Color="Color.Primary">
                         <MudText Typo="Typo.subtitle2">@match.MatchDateTime</MudText>
-                        <MudText>@match.Team1 vs @match.Team2</MudText>
+                        <MudText>@match.Team1.ShortName vs @match.Team2.ShortName</MudText>
                         <MudChip T="string" Color="Color.Secondary" Variant="Variant.Filled">
-                            @match.FinalResult
+                            @match.FinalResult.PointsTeam1 : @match.FinalResult.PointsTeam2
                         </MudChip>
                     </MudTimelineItem>
                 }

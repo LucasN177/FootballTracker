@@ -35,7 +35,9 @@ public class TabellenService
                 Niederlagen = t.lost,
                 Tore = t.goals,
                 Gegentore = t.opponentGoals,
-                Punkte = t.points
+                Punkte = t.points,
+                Id = t.teamInfoId
+                
             });
         }
         return teams;
