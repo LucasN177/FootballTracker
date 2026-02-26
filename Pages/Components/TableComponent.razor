@@ -1,3 +1,4 @@
+@using FootballTracker.Core.Models
 @using FootballTracker.Services
 @inject TabellenService TabellenService
 @inject AppStateService AppStateService
@@ -7,7 +8,7 @@
         </MudText>
 
         <MudHidden Breakpoint="Breakpoint.SmAndDown">
-            <MudTable Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" >
+            <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" OnRowClick="NavigateToDetailsPage">
                 <HeaderContent>
                     <MudTh Style="white-space: nowrap">Platz</MudTh>
                     <MudTh Style="white-space: nowrap">Team</MudTh>
@@ -29,7 +30,7 @@
         </MudHidden>
         
         <MudHidden Breakpoint="Breakpoint.MdAndUp">
-            <MudTable Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" Class="fixed-table" >
+            <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" Class="fixed-table" OnRowClick="NavigateToDetailsPage">
                 <HeaderContent>
                     <MudTh Style="white-space: nowrap">Pl.</MudTh>
                     <MudTh Style="white-space: nowrap">Team</MudTh>
