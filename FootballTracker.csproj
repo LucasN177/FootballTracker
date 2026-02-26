@@ -21,7 +21,6 @@
 
   <ItemGroup>
     <Folder Include="Core\Enums\" />
-    <Folder Include="Core\Interfaces\" />
     <Folder Include="Resources\img\" />
     <Folder Include="wwwroot\Resources\img\" />
   </ItemGroup>

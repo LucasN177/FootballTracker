@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using FootballTracker.Core.Models;
+using FootballTracker.Core.Models.Api_Response_Models;
 
 namespace FootballTracker.Services;
 

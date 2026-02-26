@@ -1,4 +1,4 @@
-namespace FootballTracker.Core.Models;
+namespace FootballTracker.Core.Models.Api_Response_Models;
 
 public class ApiTeamResponse
 {

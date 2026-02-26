@@ -1,9 +1,12 @@
 using System.Net.Http.Json;
+using FootballTracker.Core.Interfaces.Infrastructure;
 using FootballTracker.Core.Models;
+using FootballTracker.Core.Models.Api_Response_Models;
+using FootballTracker.Pages.Components;
 
 namespace FootballTracker.Services;
 
-public class TeamService
+public class TeamService(IOpenLigaDataRepository openLigaDataRepository)
 {
     private readonly HttpClient _httpClient = new();
     public List<Team>? Teams { get; set; }
@@ -11,29 +14,25 @@ public class TeamService
     public List<Game>? Games { get; set; }
     
     public Game? LastGame { get; set; }
-    public async Task<List<Team>> GetAllTeams(int year)
+    public async Task<List<Team>> GetAllTeams(string leagueShortcut, int year)
     {
-        if(Teams != null)
-            return Teams;
-        var apiUrl = $"https://api.openligadb.de/getavailableteams/bl1/{year}";
-        var apiTeams = await _httpClient.GetFromJsonAsync<List<ApiTeamResponse>>(apiUrl);
-
-        if (apiTeams == null) 
-            return new List<Team>();
+        var result = await openLigaDataRepository.GetTeams(leagueShortcut, year);
         
         var teams = new List<Team>();
-
-        foreach (var t in apiTeams)
+        if (result is { IsSuccess: true, Data: not null })
         {
-            teams.Add(new Team
+            foreach (var t in result.Data)
             {
-                Name = t.teamName,
-                ShortName = t.shortName,
-                LogoUrl = t.teamIconUrl,
-                Id = t.teamInfoId
-            });
+                teams.Add(new Team
+                {
+                    Name = t.teamName,
+                    ShortName = t.shortName,
+                    LogoUrl = t.teamIconUrl,
+                    Id = t.teamInfoId
+                });
+            }
+            Teams = teams; 
         }
-        Teams = teams;
         return teams;
     }
 
@@ -50,12 +49,35 @@ public class TeamService
     
     public async Task<List<Game>?> GetGames(int teamId, int weekCountPast, int weekCountFuture)
     {
-        //if(Games is not null && Games.Count != 0)
-            //return Games;
-        var result =
-            await _httpClient.GetFromJsonAsync<List<Game>>($"https://api.openligadb.de/getmatchesbyteamid/{teamId}/{weekCountPast}/{weekCountFuture}");
-        if (result != null)
-            Games = result;
+        var result = await openLigaDataRepository.GetMatchesByTeam(teamId, weekCountPast, weekCountFuture);
+
+        if (result is { IsSuccess: true, Data: not null })
+        {
+            var gamesList = new List<Game>();
+            foreach (var game in result.Data)
+            {
+                gamesList.Add(new Game()
+                {
+                    MatchId =  game.MatchId,
+                    MatchDateTime =  game.MatchDateTime,
+                    TimeZoneId =  game.TimeZoneId,
+                    LeagueId = game.LeagueId,
+                    LeagueName = game.LeagueName,
+                    LeagueSeason = game.LeagueSeason,
+                    LeagueShortcut = game.LeagueShortcut,
+                    MatchDateTimeUtc = game.MatchDateTimeUtc,
+                    Team1 = game.Team1,
+                    Team2 = game.Team2,
+                    LastUpdateDateTime = game.LastUpdateDateTime,
+                    MatchIsFinished = game.MatchIsFinished,
+                    MatchResults = game.MatchResults,
+                    Goals = game.Goals,
+                    Location = game.Location,
+                    NumberOfViewers =  game.NumberOfViewers
+                });
+            }
+            Games = gamesList;
+        }
         return Games;
     }
 

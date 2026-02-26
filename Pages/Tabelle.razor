@@ -9,7 +9,7 @@
         Bundesliga Tabelle
     </MudText>
 
-    <MudTable Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true">
+    <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" OnRowClick="@NavigateToDetailsPage">
         <HeaderContent>
             <MudTh>Platz</MudTh>
             <MudTh>Team</MudTh>
