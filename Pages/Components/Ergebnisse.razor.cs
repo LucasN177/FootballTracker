@@ -16,7 +16,7 @@ public partial class Ergebnisse : ComponentBase
     private List<Game> FinishedGames => AllGames!.Where(g => g.MatchIsFinished).ToList();
 
     private bool IsLoading { get; set; } = true;
-    private int ActiveTabIndex { get; set; } = 0;
+    private int ActiveTabIndex { get; set; }
     private int SelectedMatchDay { get; set; }
     private DateTime LastUpdateTime { get; set; } = DateTime.Now;
     

@@ -133,10 +133,10 @@
     </MudNavLink>
     
     <!-- Spieler -->
-    <MudNavLink Href="Spieler" 
+    <MudNavLink Href="GoalGetters" 
                 Icon="@Icons.Material.Filled.Person"
                 IconColor="Color.Tertiary">
-        Spieler
+        Torschützen
     </MudNavLink>
     
     <!-- Statistiken -->
@@ -309,7 +309,7 @@
     private async Task OnSeasonChanged()
     {
         NavigationManager.NavigateTo("");
-        NavigationManager.NavigateTo("Tabelle");
+        NavigationManager.NavigateTo(NavigationManager.Uri, replace: true);
     }
 
 }

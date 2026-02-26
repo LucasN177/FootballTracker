@@ -247,7 +247,7 @@
     // Lifecycle
     protected override async Task OnInitializedAsync()
     {
-        CurrentMatchDay = GetEstimatedCurrentMatchDay();
+        CurrentMatchDay = await GameService.GetCurrentMatchDay();
         SelectedMatchDay = CurrentMatchDay;
         await LoadMatchDay();
         ApplyFilters();
@@ -382,13 +382,6 @@
             return game.MatchDateTime.ToString("HH:mm");
 
         return "- : -";
-    }
-
-    private int GetEstimatedCurrentMatchDay()
-    {
-        var seasonStart = new DateTime(2025, 8, 1);
-        var weeksSinceStart = (DateTime.Now - seasonStart).Days / 7;
-        return Math.Max(1, Math.Min(34, (int)weeksSinceStart + 1));
     }
 }
 

@@ -1,24 +1,22 @@
 using System.Net.Http.Json;
+using FootballTracker.Core.Interfaces.Infrastructure;
 using FootballTracker.Core.Models;
 using FootballTracker.Core.Models.Api_Response_Models;
 
 namespace FootballTracker.Services;
 
-public class TabellenService
+public class TabellenService(IOpenLigaDataRepository openLigaDataRepository)
 {
     private readonly HttpClient _httpClient = new();
     public async Task<List<Team>> GetBundesligaTabelle(int year)
     {
-        // API-Aufruf
         var apiUrl = $"https://api.openligadb.de/getbltable/bl1/{year}";
-
-        // Das JSON-Array von der API holen
+        
         var apiTeams = await _httpClient.GetFromJsonAsync<List<ApiTeamResponse>>(apiUrl);
 
         if (apiTeams == null) 
             return new List<Team>();
-
-        // Mapping in dein Team-Modell
+        
         var teams = new List<Team>();
         int platz = 1;
 
@@ -42,6 +40,18 @@ public class TabellenService
             });
         }
         return teams;
+    }
+
+    public async Task<List<GoalGetter>> GetGoalGetters(string leagueShortcut, int year)
+    {
+        var goalScorerList = new List<GoalGetter>();
+        var result = await openLigaDataRepository.GetGoalGetters(leagueShortcut, year);
+        var number = 1;
+        if (result is { IsSuccess: true, Data: not null })
+        {
+            goalScorerList.AddRange(result.Data.Select(scorer => new GoalGetter() { Id = scorer.GoalGetterId, Name = scorer.GoalGetterName, GoalCount = scorer.GoalCount, Platzierung = number++}));
+        }
+        return goalScorerList;
     }
     
 }

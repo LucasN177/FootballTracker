@@ -10,6 +10,9 @@ public class OpenLigaDataRepository(HttpClient httpClient) : IOpenLigaDataReposi
 {
     private const string BaseUrl = "https://api.openligadb.de/";
     
+    private List<ApiGoalGetterResponse>? _cachedGoalGetters;
+    private int? _calledYear;
+    
     public Task<IResponse<ApiGameResponse>> GetMatchData()
     {
         throw new NotImplementedException();
@@ -50,9 +53,16 @@ public class OpenLigaDataRepository(HttpClient httpClient) : IOpenLigaDataReposi
         throw new NotImplementedException();
     }
 
-    public Task<IResponse<List<ApiGoalGetterResponse>>> GetGoalGetters(string leagueShortcut, int year)
+    public async Task<IResponse<List<ApiGoalGetterResponse>>> GetGoalGetters(string leagueShortcut, int year)
     {
-        throw new NotImplementedException();
+        if (_cachedGoalGetters != null && _calledYear == year)
+            return Response<List<ApiGoalGetterResponse>>.Success(_cachedGoalGetters);
+        var result = await httpClient.GetFromJsonAsync<List<ApiGoalGetterResponse>>($"{BaseUrl}getgoalgetters/{leagueShortcut}/{year}");
+        if (result == null)
+            return Response<List<ApiGoalGetterResponse>>.Failure("Error");
+        _cachedGoalGetters = result;
+        _calledYear = year;
+        return Response<List<ApiGoalGetterResponse>>.Success(result);
     }
 
     public async Task<IResponse<List<ApiTeamResponse>>> GetTeams(string leagueShortcut, int year)

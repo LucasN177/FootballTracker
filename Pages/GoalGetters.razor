@@ -1,0 +1,34 @@
+@page "/GoalGetters"
+@using FootballTracker.Core.Models
+@using FootballTracker.Services
+<MudPaper Class="pa-6">
+<MudText Typo="Typo.h4" Class="mb-4 font-weight-bold" Style="margin-top: 30px">
+    Bundesliga Torschützen @AppStateService.SelectedSeason.Name
+</MudText>
+
+<MudTable T="GoalGetter" Items="_players" Dense="true" Hover="true" Bordered="true" Striped="true">
+    <HeaderContent>
+        <MudTh>Platz</MudTh>
+        <MudTh>Name</MudTh>
+        <MudTh>ID</MudTh>
+        <MudTh>Tore</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Platz">@context.Platzierung</MudTd>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd DataLabel="ID">@context.Id</MudTd>
+        <MudTd DataLabel="Tore">@context.GoalCount</MudTd>
+    </RowTemplate>
+</MudTable>
+</MudPaper>
+
+@code {
+    [Inject] TabellenService TabellenService { get; set; } = null!;
+    [Inject] AppStateService AppStateService { get; set; } = null!;
+    private List<GoalGetter> _players = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _players = await TabellenService.GetGoalGetters("bl1", AppStateService.SelectedSeason.Year);
+    }
+}
