@@ -2,7 +2,7 @@
 
 Ein kleines **Blazor WebAssembly** Spaß-Projekt rund um Fußball-Daten 📊  
 
-Mit **FootballTracker** kann man Spieltage, Teams und Ergebnisse aus der :contentReference[oaicite:0]{index=0} tracken und ein bisschen analysieren.
+Mit **FootballTracker** kann man Spieltage, Teams und Ergebnisse aus der OpenLiga DB tracken und ein bisschen analysieren.
 
 > ❗ Wichtig: Das hier ist **kein professionelles Produkt**, sondern ein privates Lern- & Freizeitprojekt.
 
