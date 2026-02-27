@@ -1,58 +1,22 @@
 @page "/Teams"
-@using FootballTracker.Core.Models
-@using FootballTracker.Services
-@inject TeamService TeamService
-@inject TabellenService TabellenService
-<MudPaper Class="pa-6">
-    <MudText Typo="Typo.h4" Class="mb-4 font-weight-bold" Style="margin-top: 30px">
-        Teams
+<MudPaper Class="pa-6 mt-4">
+    <MudText Typo="Typo.h4" Class="mt-2 mb-4 font-weight-bold" Style="margin-top: 30px">
+        Teams @AppStateService.SelectedSeason.Name
     </MudText>
-    <MudSelect T="int" @bind-Value="selectedYear" Variant="Variant.Outlined">
-        <MudSelectItem T="int" Value="2021">2021</MudSelectItem>
-        <MudSelectItem T="int" Value="2022">2022</MudSelectItem>
-        <MudSelectItem T="int" Value="2023">2023</MudSelectItem>
-        <MudSelectItem T="int" Value="2024">2024</MudSelectItem>
-        <MudSelectItem T="int" Value="2025">2025</MudSelectItem>
-    </MudSelect>
     <MudDivider/>
-    <MudList T="Team">
+    <MudGrid Justify="Justify.Center">
         @foreach (var team in _teams)
         {
-            <MudListItem T="Team" Dense="true" Href="@($"TeamDetailsPage/{team.Id}")">
-                <MudStack Row="true">
-                    <MudImage Height="25" Width="25" Src="@team.LogoUrl"/>
-                    <MudText>@team.Name</MudText>
-                </MudStack>
-            </MudListItem>    
+            <MudItem>
+                <NavLink href="@($"TeamDetailsPage/{team.Id}")">
+                    <MudPaper MinWidth="200px" MinHeight="150px" Outlined="true" Elevation="2" Style="background: #fcfcfd">
+                        <MudStack AlignItems="AlignItems.Center" Class="mt-4">
+                            <MudImage Height="80" Width="80" Src="@team.LogoUrl"/>
+                            <MudText>@team.Name</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </NavLink>
+            </MudItem>
         }
-    
-    </MudList>   
+    </MudGrid>
 </MudPaper>
-
-@code {
-    int year = 2025;
-    List<Team> _teams = new();
-    private int selectedYear
-    {
-        get => year;
-        set
-        {
-            year = value;
-            GetTeams(value); // fire & forget
-        }
-    }
-
-    protected override Task OnInitializedAsync()
-    {
-        GetTeams();
-        return base.OnInitializedAsync();
-    }
-
-    private async void GetTeams(int yearLocal = 2025)
-    {
-        _teams = await TabellenService.GetBundesligaTabelle(yearLocal);
-        
-        await InvokeAsync(StateHasChanged);
-    }
-
-}

@@ -9,23 +9,26 @@
         Bundesliga Tabelle
     </MudText>
 
-    <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" OnRowClick="@NavigateToDetailsPage">
+    <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" OnRowClick="@NavigateToDetailsPage" Breakpoint="Breakpoint.None">
         <HeaderContent>
             <MudTh>Platz</MudTh>
             <MudTh>Team</MudTh>
             <MudTh>Spiele</MudTh>
-            <MudTh>Siege</MudTh>
-            <MudTh>Unentschieden</MudTh>
-            <MudTh>Niederlagen</MudTh>
+            <MudTh>S</MudTh>
+            <MudTh>U</MudTh>
+            <MudTh>N</MudTh>
             <MudTh>Tore</MudTh>
-            <MudTh>Differenz</MudTh>
+            <MudTh>Diff</MudTh>
             <MudTh>Punkte</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Platz">@context.TabellenPlatz</MudTd>
             <MudTd DataLabel="Team">
                 <MudImage Height="40" Width="40" Class="mr-2" Src="@context.LogoUrl" Style="object-fit: contain" />
-                @context.Name
+                <MudHidden Breakpoint="Breakpoint.MdAndDown">
+                    @context.Name
+                </MudHidden>
+                
             </MudTd>
             <MudTd DataLabel="Spiele">@context.Spiele</MudTd>
             <MudTd DataLabel="Siege">@context.Siege</MudTd>

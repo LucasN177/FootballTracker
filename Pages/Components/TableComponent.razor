@@ -8,7 +8,7 @@
         </MudText>
 
         <MudHidden Breakpoint="Breakpoint.SmAndDown">
-            <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" OnRowClick="NavigateToDetailsPage">
+            <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" OnRowClick="NavigateToDetailsPage" Breakpoint="Breakpoint.None">
                 <HeaderContent>
                     <MudTh Style="white-space: nowrap">Platz</MudTh>
                     <MudTh Style="white-space: nowrap">Team</MudTh>
@@ -30,7 +30,7 @@
         </MudHidden>
         
         <MudHidden Breakpoint="Breakpoint.MdAndUp">
-            <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" Class="fixed-table" OnRowClick="NavigateToDetailsPage">
+            <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" Class="fixed-table" OnRowClick="NavigateToDetailsPage" Breakpoint="Breakpoint.None">
                 <HeaderContent>
                     <MudTh Style="white-space: nowrap">Pl.</MudTh>
                     <MudTh Style="white-space: nowrap">Team</MudTh>

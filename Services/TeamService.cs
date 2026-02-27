@@ -17,6 +17,7 @@ public class TeamService(IOpenLigaDataRepository openLigaDataRepository)
     public async Task<List<Team>> GetAllTeams(string leagueShortcut, int year)
     {
         var result = await openLigaDataRepository.GetTeams(leagueShortcut, year);
+        var tableResult = await openLigaDataRepository.GetTable(leagueShortcut, year);
         
         var teams = new List<Team>();
         if (result is { IsSuccess: true, Data: not null })
@@ -28,7 +29,7 @@ public class TeamService(IOpenLigaDataRepository openLigaDataRepository)
                     Name = t.teamName,
                     ShortName = t.shortName,
                     LogoUrl = t.teamIconUrl,
-                    Id = t.teamInfoId
+                    Id = t.teamInfoId,
                 });
             }
             Teams = teams; 

@@ -19,5 +19,10 @@ public class Team
     public int Gegentore { get; set; }
     public int Differenz => Tore - Gegentore;
     public int Punkte { get; set; }
-    
+    public string Form { get; set; } = string.Empty;
+    public string Founded { get; set; } = string.Empty;
+    public string Stadium { get; set; } = string.Empty;
+    public Game NextGame { get; set; }
+    public List<Game> LastGames { get; set; } = new();
+
 }
