@@ -2,6 +2,7 @@ using FootballTracker.Core.Interfaces.Infrastructure;
 using FootballTracker.Core.Interfaces.Response;
 using FootballTracker.Core.Models;
 using FootballTracker.Core.Models.Database;
+using Supabase.Gotrue;
 
 namespace FootballTracker.Infrastructure;
 
@@ -19,10 +20,11 @@ public class DataBaseRepository(Supabase.Client client) : IDataBaseRepository
 
     public async Task<IResponse> AddPlayerToFavorites(Player player)
     {
+       var session = await client.Auth.SignInWithPassword("lucas.nagelsmann@gmail.com", "1234567890");
         var model = new FavoritePlayer()
         {
             PlayerId = player.Id,
-            UserId = 1 //Todo: Aktueller User
+            UserId = session.User.Id
         };
         
         var result = await client.From<FavoritePlayer>().Insert(model);

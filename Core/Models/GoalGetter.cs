@@ -8,4 +8,6 @@ public class GoalGetter
     public required string Name { get; set; }
     
     public required int GoalCount { get; set; }
+
+    public bool IsFavorite { get; set; }
 }

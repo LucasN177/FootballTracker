@@ -1,4 +1,5 @@
 @page "/GoalGetters"
+@using FootballTracker.Core.Interfaces.Infrastructure
 @using FootballTracker.Core.Models
 @using FootballTracker.Services
 <MudPaper Class="pa-6">
@@ -18,6 +19,11 @@
         <MudTd DataLabel="Name">@context.Name</MudTd>
         <MudTd DataLabel="ID">@context.Id</MudTd>
         <MudTd DataLabel="Tore">@context.GoalCount</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@(context.IsFavorite ? Icons.Material.Filled.Favorite : Icons.Material.Outlined.FavoriteBorder)" 
+                           Color="@(context.IsFavorite ? Color.Error : Color.Dark)"
+                           OnClick="@(() => ToggleFavorite(context))"/>
+        </MudTd>
     </RowTemplate>
 </MudTable>
 </MudPaper>
@@ -25,10 +31,22 @@
 @code {
     [Inject] TabellenService TabellenService { get; set; } = null!;
     [Inject] AppStateService AppStateService { get; set; } = null!;
+    [Inject] IDataBaseRepository DataBaseRepository { get; set; } = null!;
     private List<GoalGetter> _players = new();
 
     protected override async Task OnInitializedAsync()
     {
         _players = await TabellenService.GetGoalGetters("bl1", AppStateService.SelectedSeason.Year);
+    }
+
+    private async Task ToggleFavorite(GoalGetter goalGetter)
+    {
+        goalGetter.IsFavorite = !goalGetter.IsFavorite;
+        var player = new Player()
+        {
+            Name = goalGetter.Name,
+            Id = goalGetter.Id,
+        };
+        var result = await DataBaseRepository.AddPlayerToFavorites(player);
     }
 }
