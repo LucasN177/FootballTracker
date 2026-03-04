@@ -25,8 +25,8 @@ builder.Services.AddSingleton<TabellenService>();
 builder.Services.AddSingleton<GameService>();
 builder.Services.AddSingleton<TeamService>();
 
-var url = Environment.GetEnvironmentVariable("https://szjpkxicnlgxrriqqvge.supabase.co");
-var key = Environment.GetEnvironmentVariable("sb_publishable_DmvRsd6kO7LA2PqJu4A7yA_gPSIrcgK");
+var url = builder.Configuration["Supabase:Url"];
+var key = builder.Configuration["Supabase:AnonKey"];
 
 var options = new SupabaseOptions
 {
@@ -36,7 +36,7 @@ var options = new SupabaseOptions
 
 builder.Services.AddSingleton<Client>(provider =>
     new Client(
-        "https://szjpkxicnlgxrriqqvge.supabase.co", "sb_publishable_DmvRsd6kO7LA2PqJu4A7yA_gPSIrcgK", options
+        url!, key, options
     )
 );
 
