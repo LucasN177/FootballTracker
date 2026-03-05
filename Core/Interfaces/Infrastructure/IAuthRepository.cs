@@ -14,4 +14,11 @@ public interface IAuthRepository
     public Task<IResponse<Session>> GetCurrentSession();
     
     public Task<IResponse<User>> GetCurrentUser();
+
+    public Task<IResponse> InsertUserMetadata();
+    
+    public Task<IResponse> UpdateUserMetadata();
+    
+    public Task<IResponse> GetUserMetadata();
+    
 }
