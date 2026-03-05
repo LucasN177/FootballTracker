@@ -45,6 +45,6 @@ https://lucasn177.github.io/FootballTracker
 ### Repository klonen
 
 ```bash
-git clone https://github.com/DEIN-USERNAME/FootballTracker.git
+git clone https://github.com/lucasn177/FootballTracker.git
 cd FootballTracker
 dotnet run
