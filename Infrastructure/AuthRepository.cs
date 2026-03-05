@@ -48,4 +48,19 @@ public class AuthRepository(Supabase.Client client) :IAuthRepository
             return Task.FromException<IResponse<User>>(exception);
         }
     }
+
+    public Task<IResponse> InsertUserMetadata()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IResponse> UpdateUserMetadata()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IResponse> GetUserMetadata()
+    {
+        throw new NotImplementedException();
+    }
 }
