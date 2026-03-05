@@ -19,8 +19,8 @@ jobs:
 
     - name: Inject secrets in appsettings.json
       run: |
-          jq '.ApiSettings.Url = "${{ secrets.API_URL }}" | 
-              .ApiSettings.AnonKey = "${{ secrets.API_KEY }}"' \
+          jq '.Supabase.Url = "${{ secrets.SUPABASE_URL }}" | 
+              .Supabase.AnonKey = "${{ secrets.SUPABASE_KEY }}"' \
           wwwroot/appsettings.json > tmp.json && mv tmp.json wwwroot/appsettings.json
 
     - name: Setup .NET
