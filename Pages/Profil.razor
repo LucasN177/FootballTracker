@@ -1,0 +1,66 @@
+@page "/profile"
+@using FootballTracker.Core.Interfaces.Services
+@using Supabase.Gotrue
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudCard>
+        <MudCardContent>
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+
+                <MudAvatar Color="Color.Primary" Style="width:80px; height:80px; font-size:2rem;">
+                    @_user.Email![0]
+                </MudAvatar>
+
+                <div class="text-center">
+                    <MudText Typo="Typo.h6">@_user.Email</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@_user.Email</MudText>
+                </div>
+
+                <MudDivider Class="w-100" />
+
+                <MudSimpleTable Style="width:100%">
+                    <tbody>
+                        <tr>
+                            <td><MudText Typo="Typo.body2" Color="Color.Secondary">Vorname</MudText></td>
+                            <td><MudText Typo="Typo.body2">Max</MudText></td>
+                        </tr>
+                        <tr>
+                            <td><MudText Typo="Typo.body2" Color="Color.Secondary">Nachname</MudText></td>
+                            <td><MudText Typo="Typo.body2">Mustermann</MudText></td>
+                        </tr>
+                        <tr>
+                            <td><MudText Typo="Typo.body2" Color="Color.Secondary">E-Mail</MudText></td>
+                            <td><MudText Typo="Typo.body2">max@mustermann.de</MudText></td>
+                        </tr>
+                        <tr>
+                            <td><MudText Typo="Typo.body2" Color="Color.Secondary">Rolle</MudText></td>
+                            <td><MudChip T="string" Size="Size.Small" Color="Color.Primary">Admin</MudChip></td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Edit"
+                           FullWidth="true">
+                    Profil bearbeiten
+                </MudButton>
+
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+
+    [Inject] IAuthService AuthService { get; init; } = null!;
+    private User _user = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await AuthService.GetCurrentUser();
+        if(result is { IsSuccess: true, Data: not null })
+            _user = result.Data;
+        await base.OnInitializedAsync();
+    }
+
+}

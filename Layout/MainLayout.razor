@@ -1,9 +1,13 @@
+@using FootballTracker.Core.Interfaces.Services
 @using FootballTracker.Core.Models
+@using FootballTracker.Pages.Dialogs
 @using FootballTracker.Services
+@using Supabase.Gotrue
 @inherits LayoutComponentBase
 @inject AppStateService AppStateService
 @inject NavigationManager NavigationManager
 @inject TabellenService TabellenService
+@inject IAuthService AuthService
 
 @* Required *@
 <MudThemeProvider Theme="@_theme" IsDarkMode="@AppStateService.IsDarkMode"/>
@@ -64,8 +68,34 @@
                        OnClick="@AppStateService.ToggleDarkMode" />
         
         <!-- Settings -->
-        <MudIconButton Icon="@Icons.Material.Filled.Settings" 
-                       Color="Color.Inherit" Href="Settings"/>
+        <MudMenu Icon="@Icons.Material.Filled.Settings"
+                 Color="Color.Inherit"
+                 AnchorOrigin="Origin.BottomRight"
+                 TransformOrigin="Origin.TopRight"
+                 Dense="true">
+
+            @if (AuthService.CurrentSession == null)
+            {
+                <MudMenuItem Icon="@Icons.Material.Filled.Login"
+                             OnClick="OpenAuthDialog">
+                    Login
+                </MudMenuItem>
+            }
+            
+            @if (AuthService.CurrentSession != null)
+            {
+                <MudMenuItem Icon="@Icons.Material.Filled.Person"
+                             Href="profile">
+                    Profil
+                </MudMenuItem>
+            }
+            
+            <MudMenuItem Icon="@Icons.Material.Filled.Tune"
+                         Href="Settings">
+                Einstellungen
+            </MudMenuItem>
+
+        </MudMenu>
     </MudAppBar>
 
     <!-- Navigation Drawer -->
@@ -237,9 +267,14 @@
 
 @code
 {
+    
+    [Inject] IDialogService _dialogService { get; init; } = null!;
     private bool _statisticsExpanded = false;
 
     private List<Season> _seasonList;
+    
+    private User? _currentUser;
+    private Session? _currentSession;
     
     private MudTheme _theme = new()
     {
@@ -310,6 +345,23 @@
     {
         NavigationManager.NavigateTo("");
         NavigationManager.NavigateTo(NavigationManager.Uri, replace: true);
+    }
+
+    private async Task OpenAuthDialog()
+    {
+        var options = new DialogOptions()
+        {
+            CloseOnEscapeKey = true,
+            FullWidth = true,
+            MaxWidth = MaxWidth.Small
+        };
+        var dialog = await _dialogService.ShowAsync<AuthDialog>(null, options);
+        var result = await dialog.Result;
+        var sessionResult = await AuthService.GetCurrentSession();
+        var userResult = await AuthService.GetCurrentUser();
+        _currentSession = sessionResult.Data;
+        _currentUser = userResult.Data;
+        await InvokeAsync(StateHasChanged);
     }
 
 }

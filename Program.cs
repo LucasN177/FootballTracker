@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using FootballTracker;
 using FootballTracker.Core.Interfaces.Infrastructure;
+using FootballTracker.Core.Interfaces.Services;
 using FootballTracker.Infrastructure;
 using FootballTracker.Services;
 using MudBlazor.Services;
@@ -20,10 +21,12 @@ builder.Services.AddSingleton(_ => new HttpClient { BaseAddress = new Uri(builde
 builder.Services.AddSingleton<AppStateService>();
 builder.Services.AddSingleton<IDataBaseRepository, DataBaseRepository>();
 builder.Services.AddSingleton<IOpenLigaDataRepository, OpenLigaDataRepository>();
+builder.Services.AddSingleton<IAuthRepository, AuthRepository>();
 
 builder.Services.AddSingleton<TabellenService>();
 builder.Services.AddSingleton<GameService>();
 builder.Services.AddSingleton<TeamService>();
+builder.Services.AddSingleton<IAuthService, AuthService>();
 
 var url = builder.Configuration["Supabase:Url"];
 var key = builder.Configuration["Supabase:AnonKey"];

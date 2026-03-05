@@ -20,7 +20,7 @@ public class Goal
     public int GoalGetterId { get; set; }
 
     [JsonPropertyName("goalGetterName")]
-    public string GoalGetterName { get; set; }
+    public string GoalGetterName { get; set; } = string.Empty;
 
     [JsonPropertyName("isPenalty")]
     public bool IsPenalty { get; set; }
@@ -31,6 +31,6 @@ public class Goal
     [JsonPropertyName("isOvertime")]
     public bool IsOvertime { get; set; }
 
-    [JsonPropertyName("comment")]
-    public string Comment { get; set; }
+    [JsonPropertyName("comment")] 
+    public string Comment { get; set; } = string.Empty;
 }
