@@ -25,7 +25,7 @@
         <!-- Teams -->
         <div class="teams-container mb-4">
             <div class="team-section">
-                @if (!string.IsNullOrEmpty(Game.Team1?.LogoUrl))
+                @if (!string.IsNullOrEmpty(Game.Team1.LogoUrl))
                 {
                         <MudImage Src="@Game.Team1.LogoUrl" 
                                  Alt="@Game.Team1.ShortName" 
@@ -37,7 +37,7 @@
                     
                 }
                 <MudText Typo="Typo.body1" Align="Align.Center" Class="font-weight-medium">
-                    @(Game.Team1?.ShortName ?? "Team 1")
+                    @(Game.Team1.ShortName)
                 </MudText>
             </div>
             
@@ -51,7 +51,7 @@
             </div>
             
             <div class="team-section">
-                @if (!string.IsNullOrEmpty(Game.Team2?.LogoUrl))
+                @if (!string.IsNullOrEmpty(Game.Team2.LogoUrl))
                 {
                         <MudImage Src="@Game.Team2.LogoUrl" 
                                  Alt="@Game.Team2.ShortName" 
@@ -67,7 +67,7 @@
         </div>
 
         <!-- Goals -->
-        @if (Game.Goals?.Any() == true)
+        @if (Game.Goals.Any())
         {
             <MudDivider Class="mb-3" />
             <MudText Typo="Typo.subtitle2" Class="mb-2">
@@ -290,9 +290,8 @@
 
     .goal-item {
         padding: 4px 8px;
-        border-left: 3px solid blue;
+        border-left: 3px solid black;
         margin: 4px 0;
-        background-color: blue;
         border-radius: 4px;
     }
 
