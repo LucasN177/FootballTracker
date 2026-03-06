@@ -20,13 +20,17 @@
 </head>
 
 <body>
-    <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+<div id="app">
+    <div class="app-loader">
+        <img src="Resources/img/Icon.png" class="loader-logo" />
+
+        <div class="loader-bar-container">
+            <div class="loader-bar"></div>
+        </div>
+
+        <div class="loader-text">Loading...</div>
     </div>
+</div>
 
     <div id="blazor-error-ui">
         An unhandled error has occurred.
