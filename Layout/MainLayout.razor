@@ -25,7 +25,7 @@
         <MudIconButton Icon="@Icons.Material.Filled.Menu" 
                        Color="Color.Inherit" 
                        Edge="Edge.Start" 
-                       OnClick="@(() => @AppStateService.DrawerToggle())" />
+                       OnClick="@(() => AppStateService.DrawerToggle())" />
         
         <MudImage Src="Resources/img/Bundesliga-Logo.jpeg"
                   Alt="Bundesliga" 
@@ -94,6 +94,14 @@
                          Href="Settings">
                 Einstellungen
             </MudMenuItem>
+            
+            @if (AuthService.CurrentSession != null)
+            {
+                <MudMenuItem Icon="@Icons.Material.Filled.Logout"
+                             OnClick="@Logout">
+                    Logout
+                </MudMenuItem>
+            }
 
         </MudMenu>
     </MudAppBar>
@@ -241,10 +249,10 @@
             <div class="pa-4">
                 <MudDivider Class="mb-4" />
                 <MudText Color="Color.Secondary" Typo="Typo.caption" Class="text-center text-muted">
-                    Bundesliga Tracker v0.1
+                    Bundesliga Tracker v0.2
                 </MudText>
                 <MudText Color="Color.Secondary" Typo="Typo.caption" Class="text-center text-muted">
-                    © 2025
+                    © 2026
                 </MudText>
             </div>    
         }
@@ -268,7 +276,7 @@
 @code
 {
     
-    [Inject] IDialogService _dialogService { get; init; } = null!;
+    [Inject] IDialogService DialogService { get; init; } = null!;
     private bool _statisticsExpanded = false;
 
     private List<Season> _seasonList;
@@ -280,8 +288,8 @@
     {
         PaletteLight = new PaletteLight()
         {
-            Primary = "#d20a11", // Bundesliga Rot
-            Secondary = "#000000", // Schwarz
+            Primary = "#d20a11",
+            Secondary = "#000000",
             AppbarText = "#ffffff",
             Success = "#2e7d32",
             Info = "#1976d2",
@@ -355,13 +363,28 @@
             FullWidth = true,
             MaxWidth = MaxWidth.Small
         };
-        var dialog = await _dialogService.ShowAsync<AuthDialog>(null, options);
+        var dialog = await DialogService.ShowAsync<AuthDialog>(null, options);
         var result = await dialog.Result;
         var sessionResult = await AuthService.GetCurrentSession();
         var userResult = await AuthService.GetCurrentUser();
         _currentSession = sessionResult.Data;
         _currentUser = userResult.Data;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Logout()
+    {
+        var result = await AuthService.Logout();
+        if (result.IsSuccess)
+        {
+            NavigationManager.NavigateTo("");
+            //Message success
+        }
+        else
+        {
+            //Message failure
+        }
+            
     }
 
 }

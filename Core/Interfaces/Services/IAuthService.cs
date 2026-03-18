@@ -1,4 +1,5 @@
 using FootballTracker.Core.Interfaces.Response;
+using FootballTracker.Core.Models.Database;
 using Supabase.Gotrue;
 
 namespace FootballTracker.Core.Interfaces.Services;
@@ -16,4 +17,10 @@ public interface IAuthService
     public Task<IResponse<Session>> Register(string username, string password);
     
     public Task<IResponse> Logout();
+    
+    public Task<IResponse> InsertUserMetadata(UserDto user);
+    
+    public Task<IResponse> UpdateUserMetadata(UserDto user);
+    
+    public Task<IResponse<UserDto>> GetUserMetadata(string id);
 }

@@ -2,6 +2,7 @@ using FootballTracker.Core.Interfaces.Infrastructure;
 using FootballTracker.Core.Interfaces.Response;
 using FootballTracker.Core.Interfaces.Services;
 using FootballTracker.Core.Models;
+using FootballTracker.Core.Models.Database;
 using Supabase.Gotrue;
 
 namespace FootballTracker.Services;
@@ -51,5 +52,21 @@ public class AuthService(IAuthRepository authRepository) : IAuthService
         CurrentUser = null;
         authRepository.Logout();
         return Task.FromResult(Response.Success());
+    }
+
+    public async Task<IResponse> InsertUserMetadata(UserDto user)
+    {
+        return await authRepository.InsertUserMetadata(user);
+    }
+
+    public Task<IResponse> UpdateUserMetadata(UserDto user)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task<IResponse<UserDto>> GetUserMetadata(string id)
+    {
+        var result = await authRepository.GetUserMetadata(id);
+        return result is { IsSuccess: true, Data: not null } ? Response<UserDto>.Success(result.Data) : Response<UserDto>.Failure(result.ErrorMessage ?? "No metadata found");
     }
 }

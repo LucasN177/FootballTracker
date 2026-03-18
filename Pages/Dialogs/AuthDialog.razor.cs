@@ -1,4 +1,5 @@
 using FootballTracker.Core.Interfaces.Services;
+using FootballTracker.Core.Models.Database;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
@@ -10,12 +11,10 @@ public partial class AuthDialog : ComponentBase
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Inject] private IAuthService AuthService { get; set; } = null!;
-
-    // Tab state
-    private int _activeTab = 0;
-    private bool _isLoginMode => _activeTab == 0;
-
-    // Form references
+    
+    private int _activeTab;
+    private bool IsLoginMode => _activeTab == 0;
+    
     private MudForm? _loginForm;
     private MudForm? _registerForm;
     private bool _loginValid;
@@ -26,9 +25,9 @@ public partial class AuthDialog : ComponentBase
     private string _confirmPassword = string.Empty;
     private string _name = string.Empty;
     private string _lastName = string.Empty;
+    private string _username = string.Empty;
     private bool _acceptTermsAndConditions;
-
-    // UI state
+    
     private bool _isLoading;
     private bool _showLoginPassword;
     private bool _showRegPassword;
@@ -75,9 +74,16 @@ public partial class AuthDialog : ComponentBase
         try
         {
             var result = await AuthService.Register(_email, _password);
+            await AuthService.Login(_email, _password);
             if (result is { IsSuccess: true, Data: not null })
             {
-                
+                var model = new UserDto()
+                {
+                    Username = _username,
+                    Vorname = _name,
+                    Nachname = _lastName
+                };
+                await AuthService.InsertUserMetadata(model);
             }
             _registerSuccess = true;
             MudDialog.Close();

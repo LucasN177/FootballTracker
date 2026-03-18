@@ -5,10 +5,10 @@
                 <MudIcon Icon="@Icons.Material.Filled.LockPerson" Size="Size.Large" Color="Color.Primary" />
             </div>
             <MudText Typo="Typo.h5" Class="auth-title">
-                @(_isLoginMode ? "Willkommen zurück" : "Konto erstellen")
+                @(IsLoginMode ? "Willkommen zurück" : "Konto erstellen")
             </MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="auth-subtitle">
-                @(_isLoginMode ? "Melde dich mit deinen Zugangsdaten an" : "Erstelle jetzt dein kostenloses Konto")
+                @(IsLoginMode ? "Melde dich mit deinen Zugangsdaten an" : "Erstelle jetzt dein kostenloses Konto")
             </MudText>
         </div>
     </TitleContent>
@@ -131,6 +131,16 @@
                                               Required="true"
                                               RequiredError="Pflichtfeld"
                                               For="@(() => _lastName)"
+                                              Immediate="true"
+                                              Class="auth-field" />
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudTextField @bind-Value="_username"
+                                              Label="Username"
+                                              Variant="Variant.Outlined"
+                                              Required="true"
+                                              RequiredError="Pflichtfeld"
+                                              For="@(() => _username)"
                                               Immediate="true"
                                               Class="auth-field" />
                             </MudItem>

@@ -1,6 +1,7 @@
 using FootballTracker.Core.Interfaces.Infrastructure;
 using FootballTracker.Core.Interfaces.Response;
 using FootballTracker.Core.Models;
+using FootballTracker.Core.Models.Database;
 using Supabase.Gotrue;
 
 namespace FootballTracker.Infrastructure;
@@ -49,18 +50,33 @@ public class AuthRepository(Supabase.Client client) :IAuthRepository
         }
     }
 
-    public Task<IResponse> InsertUserMetadata()
+    public async Task<IResponse> InsertUserMetadata(UserDto userDto)
+    {
+        try
+        {
+            userDto.UserId = client.Auth.CurrentUser.Id;
+            var result = await client.From<UserDto>()
+                .Where(x => x.UserId == client.Auth.CurrentUser.Id)
+                .Set(x => x.Username, userDto.Username)
+                .Set(x => x.Vorname, userDto.Vorname)
+                .Set(x =>x.Nachname, userDto.Nachname)
+                .Update();
+            return Response.Success();
+        }
+        catch (Exception ex)
+        {
+            return Response.Failure(ex.Message, ex);
+        }
+    }
+
+    public Task<IResponse> UpdateUserMetadata(UserDto user)
     {
         throw new NotImplementedException();
     }
 
-    public Task<IResponse> UpdateUserMetadata()
+    public async Task<IResponse<UserDto>> GetUserMetadata(string id)
     {
-        throw new NotImplementedException();
-    }
-
-    public Task<IResponse> GetUserMetadata()
-    {
-        throw new NotImplementedException();
+        var result = await client.From<UserDto>().Where(x => x.UserId == id).Get();
+        return result.Model is not null ? Response<UserDto>.Success(result.Model) : Response<UserDto>.Failure("No user found");
     }
 }

@@ -1,9 +1,10 @@
 @page "/profile"
 @using FootballTracker.Core.Interfaces.Services
+@using FootballTracker.Core.Models.Database
 @using Supabase.Gotrue
 <MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
-    <MudCard>
-        <MudCardContent>
+    <MudCard Class="mt-4">
+        <MudCardContent Class="mt-4">
             <MudStack AlignItems="AlignItems.Center" Spacing="3">
 
                 <MudAvatar Color="Color.Primary" Style="width:80px; height:80px; font-size:2rem;">
@@ -11,8 +12,8 @@
                 </MudAvatar>
 
                 <div class="text-center">
-                    <MudText Typo="Typo.h6">@_user.Email</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@_user.Email</MudText>
+                    <MudText Typo="Typo.h6">@_userDto.Username</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@_user.Id</MudText>
                 </div>
 
                 <MudDivider Class="w-100" />
@@ -21,15 +22,15 @@
                     <tbody>
                         <tr>
                             <td><MudText Typo="Typo.body2" Color="Color.Secondary">Vorname</MudText></td>
-                            <td><MudText Typo="Typo.body2">Max</MudText></td>
+                            <td><MudText Typo="Typo.body2">@_userDto.Vorname</MudText></td>
                         </tr>
                         <tr>
                             <td><MudText Typo="Typo.body2" Color="Color.Secondary">Nachname</MudText></td>
-                            <td><MudText Typo="Typo.body2">Mustermann</MudText></td>
+                            <td><MudText Typo="Typo.body2">@_userDto.Nachname</MudText></td>
                         </tr>
                         <tr>
                             <td><MudText Typo="Typo.body2" Color="Color.Secondary">E-Mail</MudText></td>
-                            <td><MudText Typo="Typo.body2">max@mustermann.de</MudText></td>
+                            <td><MudText Typo="Typo.body2">@_user.Email</MudText></td>
                         </tr>
                         <tr>
                             <td><MudText Typo="Typo.body2" Color="Color.Secondary">Rolle</MudText></td>
@@ -41,7 +42,8 @@
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Edit"
-                           FullWidth="true">
+                           FullWidth="true"
+                           OnClick="() => Edit()">
                     Profil bearbeiten
                 </MudButton>
 
@@ -54,6 +56,7 @@
 
     [Inject] IAuthService AuthService { get; init; } = null!;
     private User _user = new();
+    private UserDto _userDto = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -61,6 +64,18 @@
         if(result is { IsSuccess: true, Data: not null })
             _user = result.Data;
         await base.OnInitializedAsync();
+        if (_user.Id is not null)
+        {
+            var response = await AuthService.GetUserMetadata(_user.Id);
+            if(response is { IsSuccess: true, Data: not null })
+                _userDto = response.Data;
+        }
+        
+    }
+
+    private async Task Edit()
+    {
+        
     }
 
 }
