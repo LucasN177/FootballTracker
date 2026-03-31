@@ -20,21 +20,19 @@ public class DataBaseRepository(Supabase.Client client) : IDataBaseRepository
 
     public async Task<IResponse> AddPlayerToFavorites(Player player)
     {
-        if (client.Auth.CurrentSession != null)
+        if (client.Auth.CurrentSession == null)
+            return Response.Failure("Not logged in", new Exception("Not logged in"));
+        var model = new FavoritePlayer
         {
-            var model = new FavoritePlayer
-            {
-                PlayerId = player.Id,
-                UserId = client.Auth.CurrentSession.User!.Id!
-            };
+            PlayerId = player.Id,
+            UserId = client.Auth.CurrentSession.User!.Id!
+        };
         
-            var result = await client.From<FavoritePlayer>().Insert(model);
-            if (result.Model != null)
-                return Response.Success();
-            return Response.Failure("Failed to insert favorite player", new Exception("Failed to insert favorite player")); 
-        }
+        var result = await client.From<FavoritePlayer>().Insert(model);
+        if (result.Model != null)
+            return Response.Success();
+        return Response.Failure("Failed to insert favorite player", new Exception("Failed to insert favorite player"));
 
-        return Response.Failure("Not logged in", new Exception("Not logged in"));
     }
 
     public Task<IResponse> AddTeamToFavorites(Team team)
