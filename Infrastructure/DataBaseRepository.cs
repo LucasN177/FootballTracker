@@ -29,10 +29,7 @@ public class DataBaseRepository(Supabase.Client client) : IDataBaseRepository
         };
         
         var result = await client.From<FavoritePlayer>().Insert(model);
-        if (result.Model != null)
-            return Response.Success();
-        return Response.Failure("Failed to insert favorite player", new Exception("Failed to insert favorite player"));
-
+        return result.Model != null ? Response.Success() : Response.Failure("Failed to insert favorite player", new Exception("Failed to insert favorite player"));
     }
 
     public Task<IResponse> AddTeamToFavorites(Team team)
