@@ -1,6 +1,102 @@
 @page "/Settings"
-<MudText Style="margin-top: 40px">Settings</MudText>
+@implements IDisposable
+@inject AppStateService AppStateService
+@inject IAuthService AuthService
+@inject IDialogService DialogService
+@inject FavoritesService FavoritesService
+
+<PageTitle>Einstellungen • Bundesliga Tracker</PageTitle>
+
+<PageHeader Title="Einstellungen" Subtitle="Darstellung, Saison und Konto" Icon="@Icons.Material.Filled.Tune" />
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="6">
+        <MudPaper Class="ft-card pa-5 h-100" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.h6" Class="mb-4">Darstellung</MudText>
+            <div class="d-flex align-center justify-space-between">
+                <div>
+                    <MudText Typo="Typo.body1">Dunkler Modus</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Wird auf diesem Gerät gespeichert</MudText>
+                </div>
+                <MudSwitch T="bool" Value="AppStateService.IsDarkMode" ValueChanged="AppStateService.SetDarkMode" Color="Color.Primary" />
+            </div>
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.body1" Class="mb-2">Saison</MudText>
+            <MudSelect T="int" Value="AppStateService.SelectedSeason.Year" ValueChanged="year => AppStateService.SetSeason(Season.FromYear(year))"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Alle Seiten zeigen Daten der gewählten Saison">
+                @foreach (var season in AppStateService.Saisons)
+                {
+                    <MudSelectItem T="int" Value="season.Year">Saison @season.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="ft-card pa-5 h-100" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.h6" Class="mb-4">Konto</MudText>
+            @if (AuthService.IsLoggedIn)
+            {
+                <div class="d-flex align-center gap-3 mb-4">
+                    <MudAvatar Color="Color.Primary">@(AuthService.CurrentUser?.Email?[..1].ToUpperInvariant() ?? "?")</MudAvatar>
+                    <div style="min-width:0">
+                        <MudText Typo="Typo.body1" Class="ft-ellipsis">@AuthService.CurrentUser?.Email</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @FavoritesService.Players.Count Spieler • @FavoritesService.Teams.Count Teams favorisiert
+                        </MudText>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <MudButton Href="profile" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Person">Profil</MudButton>
+                    <MudButton OnClick="Logout" Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Filled.Logout">Abmelden</MudButton>
+                </div>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+                    Mit einem Konto kannst du Lieblingsteams speichern und Spieler im Player Tracker verfolgen.
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login" Disabled="!AuthService.IsConfigured"
+                           OnClick="() => DialogService.ShowAsync<AuthDialog>(null, AuthDialog.Options)">
+                    Anmelden oder registrieren
+                </MudButton>
+                @if (!AuthService.IsConfigured)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-3">Supabase ist in dieser Umgebung nicht konfiguriert.</MudAlert>
+                }
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudPaper Class="ft-card pa-5" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.h6" Class="mb-2">Über die App</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                Bundesliga Tracker ist ein privates Lern- und Freizeitprojekt. Spieldaten stammen von
+                <MudLink Href="https://www.openligadb.de" Target="_blank">OpenLigaDB</MudLink>, Konten und Favoriten werden über Supabase gespeichert.
+                Die App lässt sich als PWA installieren und funktioniert auch auf dem Smartphone.
+            </MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
 
 @code {
-    
+    protected override async Task OnInitializedAsync()
+    {
+        AppStateService.OnChange += OnChanged;
+        AuthService.AuthStateChanged += OnChanged;
+        FavoritesService.Changed += OnChanged;
+        await FavoritesService.EnsureLoadedAsync();
+    }
+
+    private Task Logout() => AuthService.Logout();
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        AppStateService.OnChange -= OnChanged;
+        AuthService.AuthStateChanged -= OnChanged;
+        FavoritesService.Changed -= OnChanged;
+    }
 }

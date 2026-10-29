@@ -1,0 +1,184 @@
+@page "/statistiken/tore"
+@inherits SeasonPageBase
+@inject GameService GameService
+@inject StatisticsService StatisticsService
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Torstatistiken • Bundesliga Tracker</PageTitle>
+
+<PageHeader Title="Torstatistiken" Subtitle="@($"Tore, Torzeitpunkte und Rekorde der Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.QueryStats" />
+
+<DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!_finished.Any()" EmptyTitle="Noch keine beendeten Spiele">
+    <MudGrid Spacing="3" Class="mb-2">
+        <MudItem xs="6" md="3">
+            <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Success" Value="@_totalGoals.ToString()" Label="Tore" Hint="@($"{_finished.Count} Spiele")" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <StatCard Icon="@Icons.Material.Filled.Functions" Color="Color.Info" Value="@($"{(double)_totalGoals / Math.Max(1, _finished.Count):0.00}")" Label="Tore pro Spiel" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <StatCard Icon="@Icons.Material.Filled.GpsFixed" Color="Color.Warning" Value="@_penalties.ToString()" Label="Elfmetertore" Hint="@($"{_ownGoals} Eigentore")" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <StatCard Icon="@Icons.Material.Filled.Block" Color="Color.Primary" Value="@_goallessDraws.ToString()" Label="Torlose Spiele" Hint="@($"{_scorerCount} verschiedene Torschützen")" />
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" lg="8">
+            <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h6">Tore pro Spieltag</MudText>
+                <MudChart ChartType="ChartType.Bar" ChartSeries="@_perMatchDay" XAxisLabels="@_matchDayLabels" Width="100%" Height="300px" ChartOptions="@_barOptions" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" lg="4">
+            <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h6">Spielausgänge</MudText>
+                <div class="d-flex justify-center">
+                    <MudChart ChartType="ChartType.Donut" InputData="@_outcomes" InputLabels="@OutcomeLabels" Width="240px" Height="240px" ChartOptions="@_donutOptions" />
+                </div>
+                <MudStack Spacing="1" Class="mt-2">
+                    @for (var i = 0; i < OutcomeLabels.Length; i++)
+                    {
+                        var index = i;
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.body2">@OutcomeLabels[index]</MudText>
+                            <MudText Typo="Typo.body2" Class="font-weight-bold">@_outcomes[index] (@($"{100 * _outcomes[index] / Math.Max(1, _finished.Count):0}%"))</MudText>
+                        </div>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h6">Wann fallen die Tore?</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Tore je Viertelstunde</MudText>
+                <MudChart ChartType="ChartType.Bar" ChartSeries="@_byMinute" XAxisLabels="@StatisticsService.MinuteBucketLabels" Width="100%" Height="260px" ChartOptions="@_minuteOptions" />
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h6" Class="mb-2">Offensiv & Defensiv</MudText>
+                <MudSimpleTable Dense="true" Elevation="0" Class="ft-table">
+                    <thead>
+                        <tr><th>Kategorie</th><th>Team</th><th class="text-center">Wert</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (label, record, value) in _teamHighlights)
+                        {
+                            <tr class="ft-clickable" @onclick="() => OpenTeam(record)">
+                                <td>@label</td>
+                                <td>
+                                    <div class="d-flex align-center gap-2">
+                                        <TeamLogo Url="@record.Team.LogoUrl" Name="@record.Team.Name" Size="20" />
+                                        <span class="ft-ellipsis">@record.Team.DisplayName</span>
+                                    </div>
+                                </td>
+                                <td class="text-center font-weight-bold">@value</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h6" Class="mb-2">Torreichste Spiele</MudText>
+                <MudStack Spacing="1">
+                    @foreach (var game in _highestScoring)
+                    {
+                        <GameCard Game="game" />
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h6" Class="mb-2">Höchste Siege</MudText>
+                <MudStack Spacing="1">
+                    @foreach (var game in _biggestWins)
+                    {
+                        <GameCard Game="game" />
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</DataState>
+
+@code {
+    private static readonly string[] OutcomeLabels = ["Heimsieg", "Unentschieden", "Auswärtssieg"];
+
+    private List<Game> _finished = new();
+    private int _totalGoals, _penalties, _ownGoals, _goallessDraws, _scorerCount;
+    private double[] _outcomes = [0, 0, 0];
+    private string[] _matchDayLabels = [];
+    private List<ChartSeries> _perMatchDay = new();
+    private List<ChartSeries> _byMinute = new();
+    private List<Game> _highestScoring = new();
+    private List<Game> _biggestWins = new();
+    private List<(string Label, TeamRecord Record, string Value)> _teamHighlights = new();
+
+    private readonly ChartOptions _barOptions = new() { ChartPalette = ["#d20a11"], YAxisTicks = 10 };
+    private readonly ChartOptions _minuteOptions = new() { ChartPalette = ["#1976d2"], YAxisTicks = 10 };
+    private readonly ChartOptions _donutOptions = new() { ChartPalette = ["#2e7d32", "#f9a825", "#1976d2"] };
+
+    protected override async Task LoadDataAsync()
+    {
+        var games = await GameService.GetSeasonGamesAsync(Season);
+        _finished = games.Where(g => g.MatchIsFinished && g.FinalResult != null).ToList();
+        var events = StatisticsService.GetGoalEvents(_finished);
+
+        _totalGoals = _finished.Sum(TotalGoals);
+        _penalties = events.Count(e => e.Goal.IsPenalty);
+        _ownGoals = events.Count(e => e.Goal.IsOwnGoal);
+        _goallessDraws = _finished.Count(g => TotalGoals(g) == 0);
+        _scorerCount = events.Where(e => !e.Goal.IsOwnGoal && e.Goal.GoalGetterId > 0).Select(e => e.Goal.GoalGetterId).Distinct().Count();
+        _outcomes =
+        [
+            _finished.Count(g => g.FinalResult!.PointsTeam1 > g.FinalResult.PointsTeam2),
+            _finished.Count(g => g.FinalResult!.PointsTeam1 == g.FinalResult.PointsTeam2),
+            _finished.Count(g => g.FinalResult!.PointsTeam1 < g.FinalResult.PointsTeam2)
+        ];
+
+        var matchDays = GameService.GetPlayedMatchDays(_finished);
+        _matchDayLabels = ChartHelper.MatchDayLabels(matchDays);
+        var perDay = new double[matchDays];
+        foreach (var game in _finished.Where(g => g.MatchDay >= 1 && g.MatchDay <= matchDays))
+            perDay[game.MatchDay - 1] += TotalGoals(game);
+        _perMatchDay = [new ChartSeries { Name = "Tore", Data = perDay }];
+        _byMinute = [new ChartSeries { Name = "Tore", Data = StatisticsService.GetGoalsByMinute(events) }];
+
+        _highestScoring = _finished.OrderByDescending(TotalGoals).ThenByDescending(g => g.MatchDateTimeUtc).Take(5).ToList();
+        _biggestWins = _finished
+            .OrderByDescending(g => Math.Abs(g.FinalResult!.PointsTeam1 - g.FinalResult.PointsTeam2))
+            .ThenByDescending(TotalGoals)
+            .Take(5)
+            .ToList();
+
+        var records = StatisticsService.BuildRecords(_finished).Where(r => r.Played > 0).ToList();
+        _teamHighlights = new();
+        if (records.Any())
+        {
+            var bestAttack = records.MaxBy(r => r.GoalsFor)!;
+            var worstAttack = records.MinBy(r => r.GoalsFor)!;
+            var bestDefense = records.MinBy(r => r.GoalsAgainst)!;
+            var worstDefense = records.MaxBy(r => r.GoalsAgainst)!;
+            var cleanSheets = records.MaxBy(r => r.CleanSheets)!;
+            _teamHighlights.Add(("Beste Offensive", bestAttack, $"{bestAttack.GoalsFor} Tore"));
+            _teamHighlights.Add(("Schwächste Offensive", worstAttack, $"{worstAttack.GoalsFor} Tore"));
+            _teamHighlights.Add(("Beste Defensive", bestDefense, $"{bestDefense.GoalsAgainst} Gegentore"));
+            _teamHighlights.Add(("Schwächste Defensive", worstDefense, $"{worstDefense.GoalsAgainst} Gegentore"));
+            _teamHighlights.Add(("Meiste Zu-Null-Spiele", cleanSheets, cleanSheets.CleanSheets.ToString()));
+        }
+    }
+
+    private void OpenTeam(TeamRecord record) => NavigationManager.NavigateTo($"TeamDetailsPage/{record.Team.Id}");
+
+    private static int TotalGoals(Game game) => game.FinalResult is { } r ? r.PointsTeam1 + r.PointsTeam2 : 0;
+}

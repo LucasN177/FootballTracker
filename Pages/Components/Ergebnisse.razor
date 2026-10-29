@@ -1,68 +1,85 @@
-<MudPaper Class="pa-6" Elevation="3">
-    <div class="d-flex align-center justify-space-between mb-6">
-        <div class="d-flex align-center">
-            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Size="Size.Large" Class="mr-3" />
-            <MudText Typo="Typo.h4" Color="Color.Primary">
-                <strong>Bundesliga Live</strong>
-            </MudText>
+@* Spieltags-Widget für das Dashboard *@
+@inherits SeasonPageBase
+@inject GameService GameService
+@inject FavoritesService FavoritesService
+
+<MudPaper Class="ft-card pa-4 pa-md-5" Elevation="0" Outlined="true">
+    <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" />
+            <MudText Typo="Typo.h6" Class="font-weight-bold">Spieltag</MudText>
+            @if (_liveCount > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Error" Class="ft-pulse ma-0">@_liveCount live</MudChip>
+            }
         </div>
-        <MudChip T="string" Color="Color.Info" Size="Size.Small" Variant="Variant.Outlined">
-            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
-            @($"{SelectedMatchDay}. Spieltag 2025/26")
-        </MudChip>
+        <div class="d-flex align-center gap-1">
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" Disabled="@(_matchDay <= 1 || IsLoading)" OnClick="() => ChangeMatchDay(-1)" />
+            <MudText Typo="Typo.body2" Class="font-weight-medium" Style="min-width: 92px; text-align: center">@_matchDay. Spieltag</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Disabled="@(_matchDay >= GameService.MatchDaysPerSeason || IsLoading)" OnClick="() => ChangeMatchDay(1)" />
+            <MudTooltip Text="Aktualisieren">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Disabled="IsLoading" OnClick="Refresh" />
+            </MudTooltip>
+        </div>
     </div>
 
-    @if (IsLoading)
-    {
-        <MudContainer Class="pa-0">
-            <MudText Typo="Typo.body1" Class="mb-4">Lade Spieldaten...</MudText>
-            @for (int i = 0; i < 3; i++)
+    <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync">
+        <LoadingContent>
+            @for (var i = 0; i < 6; i++)
             {
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="80px" Class="mb-3" />
+                <MudSkeleton Height="44px" Class="mb-1" />
             }
-        </MudContainer>
-    }
-    else
-    {
-        <!-- Tab Navigation -->
-        <MudTabs @bind-ActivePanelIndex="ActiveTabIndex" Color="Color.Primary" SliderColor="Color.Primary" Class="mb-4">
-            <MudTabPanel Text="@GetTabText("all", AllGames.Count)" BadgeData="@AllGames.Count" BadgeColor="Color.Default">
-                <GamesList Games="AllGames" />
-            </MudTabPanel>
-            <MudTabPanel Text="@GetTabText("today", TodaysGames.Count)" BadgeData="@TodaysGames.Count" BadgeColor="Color.Primary">
-                <GamesList Games="TodaysGames"/>
-            </MudTabPanel>
-            <MudTabPanel Text="@GetTabText("upcoming", UpcomingGames.Count)" BadgeData="@UpcomingGames.Count" BadgeColor="Color.Info">
-                <GamesList Games="UpcomingGames"/>
-            </MudTabPanel>
-            <MudTabPanel Text="@GetTabText("finished", FinishedGames.Count)" BadgeData="@FinishedGames.Count" BadgeColor="Color.Success">
-                <GamesList Games="FinishedGames"/>
-            </MudTabPanel>
-        </MudTabs>
+        </LoadingContent>
+        <ChildContent>
+            <MudTabs @bind-ActivePanelIndex="_activeTab" Color="Color.Transparent" SliderColor="Color.Primary" Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pt-1" MinimumTabWidth="70px">
+                <MudTabPanel Text="@($"Alle ({_games.Count})")">
+                    <GamesList Games="_games" HighlightTeamIds="_favoriteTeamIds" />
+                </MudTabPanel>
+                <MudTabPanel Text="@($"Anstehend ({Upcoming.Count})")">
+                    <GamesList Games="Upcoming" HighlightTeamIds="_favoriteTeamIds" EmptyText="Keine anstehenden Spiele" />
+                </MudTabPanel>
+                <MudTabPanel Text="@($"Beendet ({Finished.Count})")">
+                    <GamesList Games="Finished" HighlightTeamIds="_favoriteTeamIds" EmptyText="Noch keine beendeten Spiele" />
+                </MudTabPanel>
+            </MudTabs>
+        </ChildContent>
+    </DataState>
 
-        <!-- Match Day Selector -->
-        <div class="d-flex align-center mb-4">
-            <MudText Class="mr-3">Spieltag:</MudText>
-            <MudSelect @bind-Value="SelectedMatchDay" T="int" Variant="Variant.Outlined" Dense="true" Class="mr-2" Style="max-width: 170px;" OnClose="@LoadMatchDay">
-                @foreach (var matchDay in Enumerable.Range(1, 34))
-                {
-                    <MudSelectItem Value="matchDay">@($"{matchDay}. Spieltag")</MudSelectItem>
-                }
-            </MudSelect>
-            <MudButton Variant="Variant.Outlined" 
-                       StartIcon="@Icons.Material.Filled.Refresh" 
-                       Color="Color.Primary" 
-                       Size="Size.Small"
-                       OnClick="RefreshData"
-                       Disabled="IsLoading">
-                Aktualisieren
-            </MudButton>
-        </div>
-    }
-
-    <!-- Footer -->
-    <MudDivider Class="my-4" />
-    <MudText Typo="Typo.caption" Align="Align.Center" Color="Color.Secondary">
-        Daten von OpenLigaDB • Letzte Aktualisierung: @LastUpdateTime.ToString("HH:mm:ss")
+    <MudDivider Class="my-3" />
+    <MudText Typo="Typo.caption" Align="Align.Center" Class="mud-text-secondary d-block">
+        Daten von OpenLigaDB • Stand @(GameService.LastUpdate?.ToString("HH:mm:ss") ?? "–")
     </MudText>
 </MudPaper>
+
+@code {
+    private int _matchDay;
+    private int _activeTab;
+    private List<Game> _games = new();
+    private int[] _favoriteTeamIds = [];
+    private int _liveCount;
+
+    private List<Game> Upcoming => _games.Where(g => !g.MatchIsFinished).ToList();
+    private List<Game> Finished => _games.Where(g => g.MatchIsFinished).ToList();
+
+    protected override async Task LoadDataAsync()
+    {
+        _matchDay = await GameService.GetCurrentMatchDay(Season);
+        await LoadMatchDay();
+    }
+
+    private async Task LoadMatchDay(bool forceRefresh = false)
+    {
+        _games = await GameService.GetMatchDataAsync(Season, _matchDay, forceRefresh);
+        _liveCount = _games.Count(g => g.IsLive);
+        await FavoritesService.EnsureLoadedAsync();
+        _favoriteTeamIds = FavoritesService.Teams.Select(t => t.TeamId).ToArray();
+    }
+
+    private async Task ChangeMatchDay(int delta)
+    {
+        _matchDay = Math.Clamp(_matchDay + delta, 1, GameService.MatchDaysPerSeason);
+        await RunAsync(() => LoadMatchDay());
+    }
+
+    private Task Refresh() => RunAsync(() => LoadMatchDay(forceRefresh: true));
+}

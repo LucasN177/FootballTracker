@@ -1,22 +1,62 @@
 @page "/Teams"
-<MudPaper Class="pa-6 mt-4">
-    <MudText Typo="Typo.h4" Class="mt-2 mb-4 font-weight-bold" Style="margin-top: 30px">
-        Teams @AppStateService.SelectedSeason.Name
-    </MudText>
-    <MudDivider/>
-    <MudGrid Justify="Justify.Center">
-        @foreach (var team in _teams)
-        {
-            <MudItem>
-                <NavLink href="@($"TeamDetailsPage/{team.Id}")">
-                    <MudPaper MinWidth="200px" MinHeight="150px" Outlined="true" Elevation="2" Style="background: #fcfcfd">
-                        <MudStack AlignItems="AlignItems.Center" Class="mt-4">
-                            <MudImage Height="80" Width="80" Src="@team.LogoUrl"/>
-                            <MudText>@team.Name</MudText>
-                        </MudStack>
+@inherits SeasonPageBase
+@inject TabellenService TabellenService
+
+<PageTitle>Teams • Bundesliga Tracker</PageTitle>
+
+<PageHeader Title="Teams" Subtitle="@($"Alle Vereine der Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.Groups">
+    <Actions>
+        <MudTextField @bind-Value="_search" Placeholder="Team suchen" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Clearable="true" Style="min-width: 220px" />
+    </Actions>
+</PageHeader>
+
+<DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!FilteredTeams.Any()" EmptyTitle="Keine Teams gefunden">
+    <LoadingContent>
+        <MudGrid Spacing="3">
+            @for (var i = 0; i < 12; i++)
+            {
+                <MudItem xs="6" sm="4" md="3" xl="2">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="190px" Class="rounded-lg" />
+                </MudItem>
+            }
+        </MudGrid>
+    </LoadingContent>
+    <ChildContent>
+        <MudGrid Spacing="3">
+            @foreach (var team in FilteredTeams)
+            {
+                <MudItem xs="6" sm="4" md="3" xl="2">
+                    <MudPaper Class="ft-card ft-hover-lift ft-team-tile" Elevation="0" Outlined="true">
+                        <div class="ft-team-tile-fav">
+                            <FavoriteButton Team="team" Size="Size.Small" />
+                        </div>
+                        <a href="@($"TeamDetailsPage/{team.Id}")" class="ft-team-tile-link">
+                            <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="72" />
+                            <MudText Typo="Typo.subtitle2" Align="Align.Center" Class="font-weight-bold mt-3 ft-two-lines">@team.Name</MudText>
+                            <div class="d-flex align-center gap-2 mt-2">
+                                <span class="@($"ft-pos ft-pos-{TablePositions.GetZone(team.TabellenPlatz, _teams.Count)}")">@team.TabellenPlatz</span>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@team.Punkte Pkt.</MudText>
+                            </div>
+                            <div class="mt-2"><FormChips Form="@team.Form" /></div>
+                        </a>
                     </MudPaper>
-                </NavLink>
-            </MudItem>
-        }
-    </MudGrid>
-</MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    </ChildContent>
+</DataState>
+
+@code {
+    private List<Team> _teams = new();
+    private string _search = string.Empty;
+
+    private IEnumerable<Team> FilteredTeams => string.IsNullOrWhiteSpace(_search)
+        ? _teams.OrderBy(t => t.Name)
+        : _teams.Where(t => t.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)).OrderBy(t => t.Name);
+
+    protected override async Task LoadDataAsync()
+    {
+        _teams = await TabellenService.GetBundesligaTabelle(Season);
+    }
+}

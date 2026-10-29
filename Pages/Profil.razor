@@ -1,81 +1,168 @@
 @page "/profile"
-@using FootballTracker.Core.Interfaces.Services
 @using FootballTracker.Core.Models.Database
-@using Supabase.Gotrue
-<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
-    <MudCard Class="mt-4">
-        <MudCardContent Class="mt-4">
-            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+@implements IDisposable
+@inject IAuthService AuthService
+@inject FavoritesService FavoritesService
+@inject ISnackbar Snackbar
 
-                <MudAvatar Color="Color.Primary" Style="width:80px; height:80px; font-size:2rem;">
-                    @_user.Email![0]
-                </MudAvatar>
+<PageTitle>Profil • Bundesliga Tracker</PageTitle>
 
-                <div class="text-center">
-                    <MudText Typo="Typo.h6">@_userDto.Username</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@_user.Id</MudText>
-                </div>
+<LoginRequired Title="Profil" Text="Melde dich an, um dein Profil zu sehen und zu bearbeiten." Icon="@Icons.Material.Filled.Person">
+    <MudContainer MaxWidth="MaxWidth.Small" Class="px-0">
+        <MudPaper Class="ft-card overflow-hidden" Elevation="0" Outlined="true">
+            <div class="ft-profile-banner"></div>
+            <div class="pa-5 pt-0">
+                <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                    <MudAvatar Class="ft-profile-avatar">@Initial</MudAvatar>
+                    <div class="text-center">
+                        <MudText Typo="Typo.h5">@(string.IsNullOrWhiteSpace(_userDto.Username) ? "Unbenannt" : _userDto.Username)</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">@AuthService.CurrentUser?.Email</MudText>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <MudChip T="string" Icon="@Icons.Material.Filled.Star" Color="Color.Warning" Variant="Variant.Outlined" Href="FavSpieler">@FavoritesService.Players.Count Spieler</MudChip>
+                        <MudChip T="string" Icon="@Icons.Material.Filled.Favorite" Color="Color.Error" Variant="Variant.Outlined" Href="favoriten/teams">@FavoritesService.Teams.Count Teams</MudChip>
+                    </div>
+                </MudStack>
 
-                <MudDivider Class="w-100" />
+                <MudDivider Class="my-4" />
 
-                <MudSimpleTable Style="width:100%">
-                    <tbody>
-                        <tr>
-                            <td><MudText Typo="Typo.body2" Color="Color.Secondary">Vorname</MudText></td>
-                            <td><MudText Typo="Typo.body2">@_userDto.Vorname</MudText></td>
-                        </tr>
-                        <tr>
-                            <td><MudText Typo="Typo.body2" Color="Color.Secondary">Nachname</MudText></td>
-                            <td><MudText Typo="Typo.body2">@_userDto.Nachname</MudText></td>
-                        </tr>
-                        <tr>
-                            <td><MudText Typo="Typo.body2" Color="Color.Secondary">E-Mail</MudText></td>
-                            <td><MudText Typo="Typo.body2">@_user.Email</MudText></td>
-                        </tr>
-                        <tr>
-                            <td><MudText Typo="Typo.body2" Color="Color.Secondary">Rolle</MudText></td>
-                            <td><MudChip T="string" Size="Size.Small" Color="Color.Primary">Admin</MudChip></td>
-                        </tr>
-                    </tbody>
-                </MudSimpleTable>
+                @if (_loading)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                }
+                else if (_editMode)
+                {
+                    <MudForm @ref="_form" @bind-IsValid="_isValid">
+                        <MudStack Spacing="3">
+                            <MudTextField @bind-Value="_edit.Username" Label="Username" Variant="Variant.Outlined" Required="true" RequiredError="Pflichtfeld" />
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField @bind-Value="_edit.Vorname" Label="Vorname" Variant="Variant.Outlined" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField @bind-Value="_edit.Nachname" Label="Nachname" Variant="Variant.Outlined" />
+                                </MudItem>
+                            </MudGrid>
+                            <div class="d-flex justify-end gap-2">
+                                <MudButton OnClick="() => _editMode = false" Disabled="_saving">Abbrechen</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="Save" Disabled="@(!_isValid || _saving)">
+                                    Speichern
+                                </MudButton>
+                            </div>
+                        </MudStack>
+                    </MudForm>
+                }
+                else
+                {
+                    <MudSimpleTable Elevation="0" Dense="true" Style="width:100%">
+                        <tbody>
+                            <tr>
+                                <td class="mud-text-secondary">Vorname</td>
+                                <td>@Display(_userDto.Vorname)</td>
+                            </tr>
+                            <tr>
+                                <td class="mud-text-secondary">Nachname</td>
+                                <td>@Display(_userDto.Nachname)</td>
+                            </tr>
+                            <tr>
+                                <td class="mud-text-secondary">E-Mail</td>
+                                <td>@AuthService.CurrentUser?.Email</td>
+                            </tr>
+                            <tr>
+                                <td class="mud-text-secondary">Mitglied seit</td>
+                                <td>@(AuthService.CurrentUser?.CreatedAt.ToString("dd.MM.yyyy") ?? "–")</td>
+                            </tr>
+                        </tbody>
+                    </MudSimpleTable>
 
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Edit"
-                           FullWidth="true"
-                           OnClick="() => Edit()">
-                    Profil bearbeiten
-                </MudButton>
-
-            </MudStack>
-        </MudCardContent>
-    </MudCard>
-</MudContainer>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" FullWidth="true" Class="mt-4" OnClick="StartEdit">
+                        Profil bearbeiten
+                    </MudButton>
+                }
+            </div>
+        </MudPaper>
+    </MudContainer>
+</LoginRequired>
 
 @code {
-
-    [Inject] IAuthService AuthService { get; init; } = null!;
-    private User _user = new();
     private UserDto _userDto = new();
+    private UserDto _edit = new();
+    private MudForm? _form;
+    private bool _isValid;
+    private bool _editMode;
+    private bool _loading;
+    private bool _saving;
+
+    private string Initial => !string.IsNullOrWhiteSpace(_userDto.Username)
+        ? _userDto.Username[..1].ToUpperInvariant()
+        : AuthService.CurrentUser?.Email?[..1].ToUpperInvariant() ?? "?";
 
     protected override async Task OnInitializedAsync()
     {
-        var result = await AuthService.GetCurrentUser();
-        if(result is { IsSuccess: true, Data: not null })
-            _user = result.Data;
-        await base.OnInitializedAsync();
-        if (_user.Id is not null)
-        {
-            var response = await AuthService.GetUserMetadata(_user.Id);
-            if(response is { IsSuccess: true, Data: not null })
-                _userDto = response.Data;
-        }
-        
+        AuthService.AuthStateChanged += OnAuthChanged;
+        FavoritesService.Changed += OnChanged;
+        await FavoritesService.EnsureLoadedAsync();
+        await LoadProfile();
     }
 
-    private async Task Edit()
+    private async Task LoadProfile()
     {
-        
+        if (AuthService.CurrentUser?.Id is not { } userId)
+            return;
+
+        _loading = true;
+        var response = await AuthService.GetUserMetadata(userId);
+        _userDto = response is { IsSuccess: true, Data: not null } ? response.Data : new UserDto { UserId = userId };
+        _loading = false;
     }
 
+    private void StartEdit()
+    {
+        _edit = new UserDto
+        {
+            UserId = _userDto.UserId,
+            Username = _userDto.Username,
+            Vorname = _userDto.Vorname,
+            Nachname = _userDto.Nachname
+        };
+        _editMode = true;
+    }
+
+    private async Task Save()
+    {
+        await _form!.Validate();
+        if (!_isValid)
+            return;
+
+        _saving = true;
+        var result = await AuthService.UpdateUserMetadata(_edit);
+        _saving = false;
+
+        if (result.IsSuccess)
+        {
+            _userDto = _edit;
+            _editMode = false;
+            Snackbar.Add("Profil gespeichert", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(result.ErrorMessage ?? "Profil konnte nicht gespeichert werden.", Severity.Error);
+        }
+    }
+
+    private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "–" : value;
+
+    private void OnAuthChanged() => InvokeAsync(async () =>
+    {
+        await LoadProfile();
+        StateHasChanged();
+    });
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        AuthService.AuthStateChanged -= OnAuthChanged;
+        FavoritesService.Changed -= OnChanged;
+    }
 }

@@ -8,7 +8,7 @@ public class MatchResult
     public int ResultId { get; set; }
 
     [JsonPropertyName("resultName")]
-    public string ResultName { get; set; }
+    public string? ResultName { get; set; }
 
     [JsonPropertyName("pointsTeam1")]
     public int PointsTeam1 { get; set; }
@@ -23,5 +23,5 @@ public class MatchResult
     public int ResultTypeId { get; set; }
 
     [JsonPropertyName("resultDescription")]
-    public string ResultDescription { get; set; }
+    public string? ResultDescription { get; set; }
 }

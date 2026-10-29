@@ -1,14 +1,15 @@
-<MudDialog Class="auth-dialog" DisableSidePadding="true">
+@using System.ComponentModel.DataAnnotations
+<MudDialog Class="auth-dialog" ContentClass="pa-0" TitleClass="pa-0">
     <TitleContent>
         <div class="auth-dialog-header">
             <div class="auth-logo">
-                <MudIcon Icon="@Icons.Material.Filled.LockPerson" Size="Size.Large" Color="Color.Primary" />
+                <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Size="Size.Large" />
             </div>
             <MudText Typo="Typo.h5" Class="auth-title">
                 @(IsLoginMode ? "Willkommen zurück" : "Konto erstellen")
             </MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="auth-subtitle">
-                @(IsLoginMode ? "Melde dich mit deinen Zugangsdaten an" : "Erstelle jetzt dein kostenloses Konto")
+            <MudText Typo="Typo.body2" Class="auth-subtitle">
+                @(IsLoginMode ? "Melde dich an, um Favoriten & Player Tracker zu nutzen" : "Erstelle jetzt dein kostenloses Konto")
             </MudText>
         </div>
     </TitleContent>
@@ -16,7 +17,13 @@
     <DialogContent>
         <div class="auth-content">
 
-            @* Tab Switch *@
+            @if (!AuthService.IsConfigured)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mb-4">
+                    Supabase ist in dieser Umgebung nicht konfiguriert. Login und Registrierung sind deaktiviert.
+                </MudAlert>
+            }
+
             <MudTabs @bind-ActivePanelIndex="_activeTab" Centered="true" Rounded="true"
                      Color="Color.Primary" Class="auth-tabs mb-4" PanelClass="pa-0">
                 <MudTabPanel Text="Anmelden" Icon="@Icons.Material.Filled.Login" />
@@ -38,7 +45,7 @@
                                       AdornmentColor="Color.Primary"
                                       Required="true"
                                       RequiredError="E-Mail ist erforderlich"
-                                      For="@(() => _email)"
+                                      Validation="@(new EmailAddressAttribute { ErrorMessage = "Ungültige E-Mail-Adresse" })"
                                       Immediate="true"
                                       Class="auth-field" />
 
@@ -51,13 +58,13 @@
                                       OnAdornmentClick="() => _showLoginPassword = !_showLoginPassword"
                                       Required="true"
                                       RequiredError="Passwort ist erforderlich"
-                                      For="@(() => _password)"
                                       Immediate="true"
+                                      OnKeyUp="OnLoginKeyUp"
                                       Class="auth-field" />
 
                         <div class="d-flex justify-end">
-                            <MudLink Href="#" Typo="Typo.caption" Color="Color.Primary"
-                                     Class="forgot-link">
+                            <MudLink Typo="Typo.caption" Color="Color.Primary" OnClick="HandleForgotPassword"
+                                     Class="forgot-link" Style="cursor:pointer">
                                 Passwort vergessen?
                             </MudLink>
                         </div>
@@ -69,11 +76,18 @@
                             </MudAlert>
                         }
 
+                        @if (!string.IsNullOrEmpty(_infoMessage))
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" Class="rounded-lg">
+                                @_infoMessage
+                            </MudAlert>
+                        }
+
                         <MudButton Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    Size="Size.Large"
                                    FullWidth="true"
-                                   Disabled="@(!_loginValid || _isLoading)"
+                                   Disabled="@(!_loginValid || _isLoading || !AuthService.IsConfigured)"
                                    OnClick="HandleLogin"
                                    Class="auth-btn mt-2">
                             @if (_isLoading)
@@ -91,7 +105,7 @@
                         <MudDivider Class="my-2" />
 
                         <div class="d-flex justify-center">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">
                                 Noch kein Konto?
                                 <MudLink OnClick="@(() => _activeTab = 1)" Typo="Typo.body2"
                                          Color="Color.Primary" Style="cursor:pointer; font-weight:600;">
@@ -111,7 +125,7 @@
                     <MudStack Spacing="3">
 
                         <MudGrid Spacing="2">
-                            <MudItem xs="6">
+                            <MudItem xs="12" sm="6">
                                 <MudTextField @bind-Value="_name"
                                               Label="Vorname"
                                               Variant="Variant.Outlined"
@@ -120,27 +134,27 @@
                                               AdornmentColor="Color.Primary"
                                               Required="true"
                                               RequiredError="Pflichtfeld"
-                                              For="@(() => _name)"
                                               Immediate="true"
                                               Class="auth-field" />
                             </MudItem>
-                            <MudItem xs="6">
+                            <MudItem xs="12" sm="6">
                                 <MudTextField @bind-Value="_lastName"
                                               Label="Nachname"
                                               Variant="Variant.Outlined"
                                               Required="true"
                                               RequiredError="Pflichtfeld"
-                                              For="@(() => _lastName)"
                                               Immediate="true"
                                               Class="auth-field" />
                             </MudItem>
-                            <MudItem xs="6">
+                            <MudItem xs="12">
                                 <MudTextField @bind-Value="_username"
                                               Label="Username"
                                               Variant="Variant.Outlined"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="@Icons.Material.Filled.AlternateEmail"
+                                              AdornmentColor="Color.Primary"
                                               Required="true"
                                               RequiredError="Pflichtfeld"
-                                              For="@(() => _username)"
                                               Immediate="true"
                                               Class="auth-field" />
                             </MudItem>
@@ -155,7 +169,7 @@
                                       AdornmentColor="Color.Primary"
                                       Required="true"
                                       RequiredError="E-Mail ist erforderlich"
-                                      For="@(() => _email)"
+                                      Validation="@(new EmailAddressAttribute { ErrorMessage = "Ungültige E-Mail-Adresse" })"
                                       Immediate="true"
                                       Class="auth-field" />
 
@@ -168,8 +182,8 @@
                                       OnAdornmentClick="() => _showRegPassword = !_showRegPassword"
                                       Required="true"
                                       RequiredError="Passwort ist erforderlich"
+                                      Validation="@((string val) => val.Length >= 8 ? null : "Mindestens 8 Zeichen")"
                                       HelperText="Mindestens 8 Zeichen"
-                                      For="@(() => _password)"
                                       Immediate="true"
                                       Class="auth-field" />
 
@@ -183,21 +197,16 @@
                                       Required="true"
                                       RequiredError="Bitte Passwort bestätigen"
                                       Validation="@((string val) => val == _password ? null : "Passwörter stimmen nicht überein")"
-                                      For="@(() => _confirmPassword)"
                                       Immediate="true"
                                       Class="auth-field" />
 
                         <MudCheckBox @bind-Value="_acceptTermsAndConditions"
                                      Required="true"
-                                     RequiredError="Bitte AGB akzeptieren"
+                                     RequiredError="Bitte bestätigen"
                                      Color="Color.Primary"
                                      Dense="true">
                             <MudText Typo="Typo.body2">
-                                Ich stimme den
-                                <MudLink Href="/agb" Target="_blank" Color="Color.Primary">AGB</MudLink>
-                                und der
-                                <MudLink Href="/datenschutz" Target="_blank" Color="Color.Primary">Datenschutzerklärung</MudLink>
-                                zu
+                                Ich bin einverstanden, dass meine Daten zur Nutzung der App gespeichert werden.
                             </MudText>
                         </MudCheckBox>
 
@@ -211,7 +220,7 @@
                         @if (_registerSuccess)
                         {
                             <MudAlert Severity="Severity.Success" Dense="true" Class="rounded-lg">
-                                Registrierung erfolgreich! Bitte prüfe deine E-Mails.
+                                Registrierung erfolgreich! Bitte bestätige deine E-Mail-Adresse und melde dich anschließend an.
                             </MudAlert>
                         }
 
@@ -219,7 +228,7 @@
                                    Color="Color.Primary"
                                    Size="Size.Large"
                                    FullWidth="true"
-                                   Disabled="@(!_registerValid || _isLoading)"
+                                   Disabled="@(!_registerValid || _isLoading || !AuthService.IsConfigured)"
                                    OnClick="HandleRegister"
                                    Class="auth-btn mt-2">
                             @if (_isLoading)
@@ -237,7 +246,7 @@
                         <MudDivider Class="my-2" />
 
                         <div class="d-flex justify-center">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">
                                 Bereits registriert?
                                 <MudLink OnClick="@(() => _activeTab = 0)" Typo="Typo.body2"
                                          Color="Color.Primary" Style="cursor:pointer; font-weight:600;">
@@ -255,39 +264,32 @@
 </MudDialog>
 
 <style>
-    .auth-dialog .mud-dialog {
+    .auth-dialog {
         border-radius: 20px !important;
         overflow: hidden;
-        min-width: 420px;
-        max-width: 460px;
     }
 
     .auth-dialog-header {
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 32px 24px 16px;
-        background: linear-gradient(135deg, var(--mud-palette-primary) 0%, var(--mud-palette-primary-darken) 100%);
+        text-align: center;
+        padding: 32px 24px 20px;
+        background: linear-gradient(135deg, #d20a11 0%, #8c070b 100%);
         color: white;
-        margin: -24px -24px 0;
     }
 
     .auth-logo {
         width: 64px;
         height: 64px;
-        background: rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.18);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         margin-bottom: 12px;
-        backdrop-filter: blur(10px);
-        border: 2px solid rgba(255,255,255,0.3);
-    }
-
-    .auth-logo .mud-icon-root {
-        color: white !important;
-        font-size: 2rem;
+        border: 2px solid rgba(255,255,255,0.35);
+        color: white;
     }
 
     .auth-title {
@@ -297,21 +299,11 @@
     }
 
     .auth-subtitle {
-        color: rgba(255,255,255,0.8) !important;
-        font-size: 0.8rem !important;
+        color: rgba(255,255,255,0.85) !important;
     }
 
     .auth-content {
-        padding: 16px 8px 8px;
-    }
-
-    .auth-tabs {
-        border-radius: 12px !important;
-        overflow: hidden;
-    }
-
-    .auth-form {
-        padding: 4px 0;
+        padding: 20px 24px 24px;
     }
 
     .auth-field .mud-input-outlined-border {
@@ -322,13 +314,7 @@
         border-radius: 12px !important;
         height: 48px;
         font-weight: 600 !important;
-        letter-spacing: 0.5px;
         text-transform: none !important;
         font-size: 1rem !important;
     }
-
-    .forgot-link {
-        font-size: 0.78rem !important;
-    }
 </style>
-

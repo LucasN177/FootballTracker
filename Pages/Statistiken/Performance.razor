@@ -1,0 +1,173 @@
+@page "/statistiken/performance"
+@inherits SeasonPageBase
+@inject GameService GameService
+@inject TabellenService TabellenService
+@inject FavoritesService FavoritesService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Performance • Bundesliga Tracker</PageTitle>
+
+<PageHeader Title="Performance" Subtitle="@($"Formkurven und Punkteverläufe der Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.TrendingUp" />
+
+<DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_playedMatchDays == 0" EmptyTitle="Noch keine Spiele absolviert">
+    <MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true">
+        <div class="d-flex align-center flex-wrap gap-3 mb-2">
+            <div class="flex-grow-1">
+                <MudText Typo="Typo.h6">Punkteverlauf</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Kumulierte Punkte je Spieltag – bis zu 6 Teams vergleichen</MudText>
+            </div>
+            <MudSelect T="int" MultiSelection="true" SelectedValues="_selectedTeamIds" SelectedValuesChanged="OnTeamsChanged"
+                       Label="Teams" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 280px; max-width: 420px"
+                       MultiSelectionTextFunc="@(values => $"{values.Count} Teams ausgewählt")">
+                @foreach (var team in _table)
+                {
+                    <MudSelectItem T="int" Value="team.Id">@team.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+        <MudChart ChartType="ChartType.Line" ChartSeries="@_series" XAxisLabels="@_labels" Width="100%" Height="340px" ChartOptions="@_lineOptions" />
+    </MudPaper>
+
+    <MudPaper Class="ft-card pa-0 pa-md-2" Elevation="0" Outlined="true">
+        <div class="d-flex align-center flex-wrap gap-3 pa-4 pb-2">
+            <div class="flex-grow-1">
+                <MudText Typo="Typo.h6">Formtabelle</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Bilanz der letzten @_formLength Spiele</MudText>
+            </div>
+            <MudToggleGroup T="int" Value="_formLength" ValueChanged="OnFormLengthChanged" Size="Size.Small" Color="Color.Primary" Outlined="true">
+                <MudToggleItem Value="3" Text="3" />
+                <MudToggleItem Value="5" Text="5" />
+                <MudToggleItem Value="10" Text="10" />
+            </MudToggleGroup>
+        </div>
+        <MudTable T="FormRow" Items="_formTable" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.None"
+                  OnRowClick="@(args => NavigationManager.NavigateTo($"TeamDetailsPage/{args.Item!.Record.Team.Id}"))" RowClass="ft-clickable" Class="ft-table">
+            <HeaderContent>
+                <MudTh>#</MudTh>
+                <MudTh>Team</MudTh>
+                <MudTh Class="text-center">Sp</MudTh>
+                <MudTh Class="text-center">Tore</MudTh>
+                <MudTh Class="text-center">Pkt</MudTh>
+                <MudTh Class="text-center d-none d-sm-table-cell">Ø Pkt</MudTh>
+                <MudTh>Form</MudTh>
+                <MudTh Class="text-center d-none d-md-table-cell">Tabelle</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Position</MudTd>
+                <MudTd>
+                    <div class="d-flex align-center gap-2">
+                        <TeamLogo Url="@context.Record.Team.LogoUrl" Name="@context.Record.Team.Name" Size="22" />
+                        <span class="ft-ellipsis">@context.Record.Team.DisplayName</span>
+                    </div>
+                </MudTd>
+                <MudTd Class="text-center">@context.Record.Played</MudTd>
+                <MudTd Class="text-center ft-nowrap">@context.Record.GoalsFor:@context.Record.GoalsAgainst</MudTd>
+                <MudTd Class="text-center font-weight-bold">@context.Record.Points</MudTd>
+                <MudTd Class="text-center d-none d-sm-table-cell">@context.Record.PointsPerGame.ToString("0.00")</MudTd>
+                <MudTd><FormChips Form="@context.Form" /></MudTd>
+                <MudTd Class="text-center d-none d-md-table-cell">
+                    @if (context.TablePosition > 0)
+                    {
+                        var trend = context.TablePosition - context.Position;
+                        <div class="d-flex align-center justify-center gap-1">
+                            <span>@context.TablePosition.</span>
+                            @if (trend > 0)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Success" Size="Size.Small" Title="Besser in Form als in der Tabelle" />
+                            }
+                            else if (trend < 0)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Error" Size="Size.Small" Title="Schlechter in Form als in der Tabelle" />
+                            }
+                        </div>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</DataState>
+
+@code {
+    private record FormRow(int Position, TeamRecord Record, string Form, int TablePosition);
+
+    private List<Team> _table = new();
+    private List<Game> _games = new();
+    private int _playedMatchDays;
+    private string[] _labels = [];
+    private IEnumerable<int> _selectedTeamIds = [];
+    private List<ChartSeries> _series = new();
+    private int _formLength = 5;
+    private List<FormRow> _formTable = new();
+
+    private readonly ChartOptions _lineOptions = new()
+    {
+        LineStrokeWidth = 3,
+        InterpolationOption = InterpolationOption.Straight,
+        ChartPalette = ["#d20a11", "#1976d2", "#2e7d32", "#ed8b00", "#7c3aed", "#0891b2"]
+    };
+
+    protected override async Task LoadDataAsync()
+    {
+        _games = await GameService.GetSeasonGamesAsync(Season);
+        _table = await TabellenService.GetBundesligaTabelle(Season);
+        _playedMatchDays = GameService.GetPlayedMatchDays(_games);
+        _labels = ChartHelper.MatchDayLabels(_playedMatchDays);
+
+        // Vorauswahl: Lieblingsteams, sonst die Top 4
+        await FavoritesService.EnsureLoadedAsync();
+        var available = _table.Select(t => t.Id).ToHashSet();
+        var favorites = FavoritesService.Teams.Select(t => t.TeamId).Where(available.Contains).Take(6).ToList();
+        _selectedTeamIds = favorites.Any() ? favorites : _table.Take(4).Select(t => t.Id).ToList();
+
+        BuildSeries();
+        BuildFormTable();
+    }
+
+    private void OnTeamsChanged(IEnumerable<int> values)
+    {
+        _selectedTeamIds = values.Take(6).ToList();
+        BuildSeries();
+    }
+
+    private void OnFormLengthChanged(int value)
+    {
+        _formLength = value;
+        BuildFormTable();
+    }
+
+    private void BuildSeries()
+    {
+        var teamsById = _table.ToDictionary(t => t.Id);
+        _series = _selectedTeamIds
+            .Where(teamsById.ContainsKey)
+            .Select(id => new ChartSeries
+            {
+                Name = teamsById[id].DisplayName,
+                Data = StatisticsService.GetPointsProgression(_games, id, _playedMatchDays)
+            })
+            .ToList();
+    }
+
+    private void BuildFormTable()
+    {
+        var finished = _games.Where(g => g.MatchIsFinished).ToList();
+        var recentGames = _table
+            .SelectMany(team => finished.Where(g => g.Involves(team.Id)).OrderBy(g => g.MatchDateTimeUtc).TakeLast(_formLength))
+            .Distinct()
+            .ToList();
+
+        var tablePositions = _table.ToDictionary(t => t.Id, t => t.TabellenPlatz);
+        var recentByTeam = _table.ToDictionary(t => t.Id,
+            t => finished.Where(g => g.Involves(t.Id)).OrderBy(g => g.MatchDateTimeUtc).TakeLast(_formLength).ToHashSet());
+
+        _formTable = StatisticsService
+            .BuildRecords(recentGames, (game, team) => recentByTeam.TryGetValue(team.Id, out var set) && set.Contains(game))
+            .Where(r => tablePositions.ContainsKey(r.Team.Id))
+            .Select((r, i) => new FormRow(
+                i + 1,
+                r,
+                new string(recentByTeam[r.Team.Id].OrderBy(g => g.MatchDateTimeUtc).Select(g => g.GetOutcomeFor(r.Team.Id) ?? '-').ToArray()),
+                tablePositions.GetValueOrDefault(r.Team.Id)))
+            .ToList();
+    }
+}

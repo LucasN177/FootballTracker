@@ -1,296 +1,118 @@
-@using FootballTracker.Core.Models
-@using FootballTracker.Services
+@* Team-Schnellansicht für das Dashboard *@
+@inherits SeasonPageBase
 @inject TabellenService TabellenService
-<MudPaper Class="pa-6">
-    @if (teams.Any())
-    {
-        <MudGrid>
-            <MudItem xs="12">
-                <MudSelect T="Team"
-                           @bind-Value="selectedTeam"
-                           Label="Team auswählen"
-                           Variant="Variant.Outlined"
-                           Immediate="true">
-                    @foreach (var team in teams)
-                    {
-                        <MudSelectItem T="Team" Value="@team">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudImage Width="25" Height="25" Src="@team.LogoUrl"/>
-                                <MudText>@team.Name</MudText>
-                            </MudStack>
-                        </MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
+@inject FavoritesService FavoritesService
 
-            @if (selectedTeam is not null)
+<MudPaper Class="ft-card pa-4 pa-md-5" Elevation="0" Outlined="true">
+    <div class="d-flex align-center gap-2 mb-3">
+        <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Info" />
+        <MudText Typo="Typo.h6" Class="font-weight-bold">Team-Check</MudText>
+    </div>
+
+    <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!_teams.Any()" EmptyTitle="Keine Teams verfügbar">
+        <MudSelect T="Team" Value="_selectedTeam" ValueChanged="SelectTeam" Label="Team auswählen" Variant="Variant.Outlined" Margin="Margin.Dense"
+                   ToStringFunc="@(t => t?.Name ?? string.Empty)">
+            @foreach (var team in _teams)
             {
-                <!-- Team Header -->
-                <MudItem xs="12">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                        <MudImage Width="64" Height="64" Src="@selectedTeam.LogoUrl"/>
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.h5">@selectedTeam.Name</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @selectedTeam.Stadium • Gegründet @selectedTeam.Founded
-                            </MudText>
-                        </MudStack>
-                        <MudSpacer/>
-                        <MudChip T="string"
-                                 Color="@GetFormColor(selectedTeam.Form)"
-                                 Size="Size.Medium">
-                            Letzte 5: @selectedTeam.Form
-                        </MudChip>
-                    </MudStack>
-                    <MudDivider Class="mt-3"/>
-                </MudItem>
+                <MudSelectItem T="Team" Value="@team">
+                    <div class="d-flex align-center gap-2">
+                        <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="22" />
+                        <span>@team.Name</span>
+                    </div>
+                </MudSelectItem>
+            }
+        </MudSelect>
 
-                <!-- Stat Karten -->
-                <MudItem xs="6" sm="3">
-                    <MudPaper Elevation="2" Class="pa-4 text-center">
-                        <MudText Typo="Typo.h4" Color="Color.Success">
-                            @selectedTeam.Siege
-                        </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">SIEGE</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="6" sm="3">
-                    <MudPaper Elevation="2" Class="pa-4 text-center">
-                        <MudText Typo="Typo.h4" Color="Color.Warning">
-                            @selectedTeam.Unentschieden
-                        </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">UNENTSCHIEDEN</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="6" sm="3">
-                    <MudPaper Elevation="2" Class="pa-4 text-center">
-                        <MudText Typo="Typo.h4" Color="Color.Error">
-                            @selectedTeam.Niederlagen
-                        </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">NIEDERLAGEN</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="6" sm="3">
-                    <MudPaper Elevation="2" Class="pa-4 text-center">
-                        <MudText Typo="Typo.h4" Color="Color.Primary">
-                            @selectedTeam.Punkte
-                        </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">PUNKTE</MudText>
-                    </MudPaper>
-                </MudItem>
+        @if (_selectedTeam is { } team)
+        {
+            <div class="d-flex align-center gap-3 mt-4">
+                <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="56" />
+                <div class="flex-grow-1" style="min-width: 0">
+                    <MudLink Href="@($"TeamDetailsPage/{team.Id}")" Typo="Typo.h6" Color="Color.Inherit" Class="ft-ellipsis d-block">@team.Name</MudLink>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Platz @team.TabellenPlatz • @team.Punkte Punkte</MudText>
+                </div>
+                <FavoriteButton Team="team" />
+            </div>
 
-                <!-- Pie Chart + Tore -->
-                <MudItem xs="12" sm="6" Class="d-flex justify-center">
-                    <MudChart ChartType="ChartType.Pie"
-                              InputData="@data"
-                              @bind-SelectedIndex="Index"
-                              InputLabels="@labels"
-                              Width="280px"
-                              Height="280px"
-                              ChartOptions="@chartOptions"/>
-                </MudItem>
-
-                <MudItem xs="12" sm="6">
-                    <MudText Typo="Typo.subtitle1" Class="mb-2">
-                        <b>Tor-Statistiken</b>
-                    </MudText>
-
-                    <MudStack Spacing="3">
-                        <div>
-                            <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.body2">Geschossen</MudText>
-                                <MudText Typo="Typo.body2">
-                                    <b>@selectedTeam.Tore</b>
-                                </MudText>
-                            </MudStack>
-                            <MudProgressLinear Color="Color.Success"
-                                              Value="@GoalsForPercent"
-                                              Rounded="true"
-                                              Size="Size.Medium"
-                                              Class="mt-1"/>
-                        </div>
-                        <div>
-                            <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.body2">Kassiert</MudText>
-                                <MudText Typo="Typo.body2">
-                                    <b>@selectedTeam.Gegentore</b>
-                                </MudText>
-                            </MudStack>
-                            <MudProgressLinear Color="Color.Error"
-                                              Value="@GoalsAgainstPercent"
-                                              Rounded="true"
-                                              Size="Size.Medium"
-                                              Class="mt-1"/>
-                        </div>
-                        <div>
-                            <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.body2">Differenz</MudText>
-                                <MudText Typo="Typo.body2"
-                                         Color="@(selectedTeam.Differenz >= 0 ? Color.Success : Color.Error)">
-                                    <b>@(selectedTeam.Differenz >= 0 ? "+" : "")@selectedTeam.Differenz</b>
-                                </MudText>
-                            </MudStack>
-                        </div>
-                    </MudStack>
-
-                    <!-- Nächstes Spiel -->
-                    @if (selectedTeam.NextGame is not null)
+            <MudGrid Spacing="2" Class="mt-2">
+                <MudItem xs="12" sm="5" Class="d-flex justify-center align-center">
+                    @if (team.Spiele > 0)
                     {
-                        <MudDivider Class="my-3"/>
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">Nächstes Spiel</MudText>
-                        <MudPaper Outlined="true" Class="pa-3">
-                            <MudStack Row="true"
-                                      AlignItems="AlignItems.Center"
-                                      Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.body2">
-                                    @if (selectedTeam.NextGame.Team1.Name == selectedTeam.Name)
-                                    {
-                                        @selectedTeam.NextGame.Team2
-                                    }
-                                    else
-                                    {
-                                        @selectedTeam.NextGame.Team1
-                                    }
-                                    
-                                </MudText>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Default">
-                                    @(selectedTeam.NextGame.Team1.Name == selectedTeam.Name ? "Heim" : "Auswärts")
-                                </MudChip>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @selectedTeam.NextGame.MatchDateTime.Date.ToString("dd.MM – HH:mm")
-                                </MudText>
-                            </MudStack>
-                        </MudPaper>
+                        <MudChart ChartType="ChartType.Donut" InputData="@_chartData" InputLabels="@ChartLabels"
+                                  Width="170px" Height="170px" ChartOptions="@_chartOptions"></MudChart>
                     }
                 </MudItem>
-
-                <!-- Letzte Spiele -->
-                <MudItem xs="12">
-                    <MudText Typo="Typo.subtitle1" Class="mb-2"><b>Letzte Spiele</b></MudText>
-                    <MudTable Items="@selectedTeam.LastGames"
-                              Dense="true"
-                              Hover="true"
-                              Breakpoint="Breakpoint.Sm">
-                        <HeaderContent>
-                            <MudTh>Datum</MudTh>
-                            <MudTh>Gegner</MudTh>
-                            <MudTh>Ergebnis</MudTh>
-                            <MudTh>Ort</MudTh>
-                            <MudTh></MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd>@context.MatchDateTime.ToString("dd.MM.yy")</MudTd>
-                            <MudTd>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                    <MudImage Width="20" Height="20" Src="@(context.Team1.Name == selectedTeam.Name ? context.Team2.LogoUrl : context.Team1.LogoUrl)"/>
-                                    <MudText Typo="Typo.body2">@(context.Team1.Name == selectedTeam.Name ? context.Team2.ShortName : context.Team1.ShortName)</MudText>
-                                </MudStack>
-                            </MudTd>
-                            <MudTd>
-                                <b>@context.DisplayResult</b>
-                            </MudTd>
-                            <MudTd>@(context.Team1.Name == selectedTeam.Name ? "Heim" : "Auswärts")</MudTd>
-                            <MudTd>
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="@GetResultColor(context)">
-                                    @context.DisplayResult
-                                </MudChip>
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
+                <MudItem xs="12" sm="7">
+                    <MudStack Spacing="2">
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.body2">Form</MudText>
+                            <FormChips Form="@team.Form" />
+                        </div>
+                        <div>
+                            <div class="d-flex justify-space-between">
+                                <MudText Typo="Typo.body2">Tore pro Spiel</MudText>
+                                <MudText Typo="Typo.body2" Class="font-weight-bold">@PerGame(team.Tore)</MudText>
+                            </div>
+                            <MudProgressLinear Color="Color.Success" Value="@GoalShare(team.Tore)" Rounded="true" Size="Size.Small" Class="mt-1" />
+                        </div>
+                        <div>
+                            <div class="d-flex justify-space-between">
+                                <MudText Typo="Typo.body2">Gegentore pro Spiel</MudText>
+                                <MudText Typo="Typo.body2" Class="font-weight-bold">@PerGame(team.Gegentore)</MudText>
+                            </div>
+                            <MudProgressLinear Color="Color.Error" Value="@GoalShare(team.Gegentore)" Rounded="true" Size="Size.Small" Class="mt-1" />
+                        </div>
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.body2">Tordifferenz</MudText>
+                            <MudText Typo="Typo.body2" Class="font-weight-bold" Color="@(team.Differenz >= 0 ? Color.Success : Color.Error)">
+                                @(team.Differenz > 0 ? "+" : "")@team.Differenz
+                            </MudText>
+                        </div>
+                    </MudStack>
                 </MudItem>
+            </MudGrid>
+
+            @if (team.NextGame is { } next)
+            {
+                var opponent = next.GetOpponent(team.Id);
+                <MudPaper Outlined="true" Class="pa-3 mt-3 d-flex align-center gap-3" Elevation="0">
+                    <MudText Typo="Typo.overline" Class="mud-text-secondary">Nächstes Spiel</MudText>
+                    <TeamLogo Url="@opponent.LogoUrl" Name="@opponent.Name" Size="24" />
+                    <MudText Typo="Typo.body2" Class="flex-grow-1 ft-ellipsis">@opponent.DisplayName</MudText>
+                    <MudChip T="string" Size="Size.Small" Class="ma-0">@(next.IsHomeTeam(team.Id) ? "Heim" : "Auswärts")</MudChip>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@next.GetFormattedDateTime("dd.MM. HH:mm")</MudText>
+                </MudPaper>
             }
-        </MudGrid>
-    }
-    else
-    {
-        <MudStack AlignItems="AlignItems.Center" Class="py-8">
-            <MudProgressCircular Indeterminate="true"/>
-            <MudText Color="Color.Secondary">Teams werden geladen...</MudText>
-        </MudStack>
-    }
+        }
+    </DataState>
 </MudPaper>
 
 @code {
+    private static readonly string[] ChartLabels = ["Siege", "Remis", "Niederlagen"];
+    private readonly ChartOptions _chartOptions = new() { ChartPalette = ["#2e7d32", "#f9a825", "#d32f2f"] };
 
-    private Color GetFormColor(string form) => form.Count(c => c == 'W') >= 3
-        ? Color.Success
-        : form.Count(c => c == 'L') >= 3
-            ? Color.Error
-            : Color.Warning;
+    private List<Team> _teams = new();
+    private Team? _selectedTeam;
+    private double[] _chartData = [];
 
-    private Color GetResultColor(Game game)
+    protected override async Task LoadDataAsync()
     {
-        if (game.FinalResult == null)
-            return Color.Secondary;
-        if(game.FinalResult.PointsTeam1 == game.FinalResult.PointsTeam2)
-            return Color.Warning;
-        
-        if ((game.Team1.ShortName == selectedTeam.ShortName && game.FinalResult.PointsTeam1 > game.FinalResult.PointsTeam2) || (game.Team2.ShortName == selectedTeam.ShortName && game.FinalResult.PointsTeam2 > game.FinalResult.PointsTeam1))
-        {
-            return Color.Success;
-        }
-        else
-        {
-            return Color.Error;
-        }
+        _teams = await TabellenService.GetBundesligaTabelle(Season);
+        await FavoritesService.EnsureLoadedAsync();
+
+        // Bevorzugt das erste Lieblingsteam anzeigen
+        var favoriteIds = FavoritesService.Teams.Select(t => t.TeamId).ToHashSet();
+        SelectTeam(_teams.FirstOrDefault(t => favoriteIds.Contains(t.Id)) ?? _teams.FirstOrDefault());
     }
 
-    private double GoalsForPercent =>
-        selectedTeam is null || (selectedTeam.Tore + selectedTeam.Gegentore) == 0
-            ? 0
-            : (double)selectedTeam.Tore / (selectedTeam.Gegentore + selectedTeam.Gegentore) * 100;
-
-    private double GoalsAgainstPercent =>
-        selectedTeam is null || (selectedTeam.Tore + selectedTeam.Gegentore) == 0
-            ? 0
-            : (double)selectedTeam.Gegentore / (selectedTeam.Tore + selectedTeam.Gegentore) * 100;
-}
-
-@code {
-    private List<Team> teams = new();
-    private Team _selectedTeam;
-    private int Index = -1;
-    double[] data;
-    string[] labels = { "Won", "Remis", "Lost" };
-    private ChartOptions chartOptions = new()
+    private void SelectTeam(Team? team)
     {
-        ChartPalette = new[] { "#4CAF50", "#FFEB3B", "#F44336" } 
-    };
-
-    protected override Task OnInitializedAsync()
-    {
-        setTeams();
-        return base.OnInitializedAsync();
+        _selectedTeam = team;
+        _chartData = team == null ? [] : [team.Siege, team.Unentschieden, team.Niederlagen];
     }
 
-    private Team selectedTeam
-    {
-        get => _selectedTeam;
-        set
-        {
-            _selectedTeam = value;
-            _ = updateChart(); // fire & forget
-        }
-    }
+    private string PerGame(int goals) => _selectedTeam is { Spiele: > 0 } t ? ((double)goals / t.Spiele).ToString("0.00") : "–";
 
-    private async Task updateChart()
-    {
-        if (selectedTeam == null) return;
-
-        data = new[]
-        {
-            Convert.ToDouble(selectedTeam.Siege),
-            Convert.ToDouble(selectedTeam.Unentschieden),
-            Convert.ToDouble(selectedTeam.Niederlagen)
-        };
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async void setTeams()
-    {
-        teams = await TabellenService.GetBundesligaTabelle(2025);
-        selectedTeam = teams.FirstOrDefault();  
-    }
+    private double GoalShare(int goals) =>
+        _selectedTeam is { } t && t.Tore + t.Gegentore > 0 ? (double)goals / (t.Tore + t.Gegentore) * 100 : 0;
 }

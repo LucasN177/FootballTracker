@@ -4,9 +4,14 @@
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
-        <PageTitle>Not found</PageTitle>
+        <PageTitle>Seite nicht gefunden</PageTitle>
         <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
+            <MudStack AlignItems="AlignItems.Center" Class="py-16" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Style="font-size: 4rem" Color="Color.Primary" />
+                <MudText Typo="Typo.h4">Abseits!</MudText>
+                <MudText Class="mud-text-secondary">Diese Seite gibt es leider nicht.</MudText>
+                <MudButton Href="" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Home" Class="mt-2">Zum Dashboard</MudButton>
+            </MudStack>
         </LayoutView>
     </NotFound>
 </Router>

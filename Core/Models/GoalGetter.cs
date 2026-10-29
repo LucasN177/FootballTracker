@@ -9,5 +9,5 @@ public class GoalGetter
     
     public required int GoalCount { get; set; }
 
-    public bool IsFavorite { get; set; }
+    public Team? Team { get; set; }
 }

@@ -1,24 +1,31 @@
-@using FootballTracker.Core.Models
-@using MudBlazor
-
 @if (Games == null || !Games.Any())
 {
-    <div class="text-center pa-8">
-        <MudIcon Icon="@Icons.Material.Filled.SportsScore" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
-        <MudText Typo="Typo.body1" Color="Color.Secondary">Keine Spiele in dieser Kategorie</MudText>
-    </div>
+    <MudStack AlignItems="AlignItems.Center" Class="pa-8" Spacing="1">
+        <MudIcon Icon="@Icons.Material.Filled.SportsScore" Size="Size.Large" Class="mud-text-secondary" />
+        <MudText Typo="Typo.body1" Class="mud-text-secondary">@EmptyText</MudText>
+    </MudStack>
 }
 else
 {
-    <MudStack Spacing="3">
-        @foreach (var game in Games)
-        {
-            <GameCard Game="game" />
-        }
-    </MudStack>
+    @foreach (var day in Games.GroupBy(g => g.MatchDateTime.Date).OrderBy(g => g.Key))
+    {
+        <MudText Typo="Typo.overline" Class="mud-text-secondary d-block mt-3 mb-1">
+            @day.Key.ToString("dddd, dd. MMMM")
+        </MudText>
+        <MudStack Spacing="1">
+            @foreach (var game in day.OrderBy(g => g.MatchDateTimeUtc))
+            {
+                <GameCard Game="game" ShowDate="false" Highlight="HighlightTeamIds.Contains(game.Team1.Id) || HighlightTeamIds.Contains(game.Team2.Id)" />
+            }
+        </MudStack>
+    }
 }
 
 @code {
-    [Parameter] 
+    [Parameter]
     public List<Game> Games { get; set; } = new();
+
+    [Parameter] public string EmptyText { get; set; } = "Keine Spiele in dieser Kategorie";
+
+    [Parameter] public IReadOnlyCollection<int> HighlightTeamIds { get; set; } = Array.Empty<int>();
 }

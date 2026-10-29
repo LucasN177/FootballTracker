@@ -1,0 +1,58 @@
+@if (IsLoading)
+{
+    @if (LoadingContent != null)
+    {
+        @LoadingContent
+    }
+    else
+    {
+        <MudStack AlignItems="AlignItems.Center" Class="py-10">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MudText Class="mud-text-secondary">@LoadingText</MudText>
+        </MudStack>
+    }
+}
+else if (!string.IsNullOrEmpty(Error))
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="my-4">
+        <div class="d-flex align-center flex-wrap gap-3">
+            <span>Daten konnten nicht geladen werden: @Error</span>
+            @if (OnRetry.HasDelegate)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Refresh" OnClick="OnRetry">
+                    Erneut versuchen
+                </MudButton>
+            }
+        </div>
+    </MudAlert>
+}
+else if (IsEmpty)
+{
+    <MudStack AlignItems="AlignItems.Center" Class="py-10 px-4" Spacing="1">
+        <MudIcon Icon="@EmptyIcon" Size="Size.Large" Class="mud-text-secondary" />
+        <MudText Typo="Typo.h6" Class="mud-text-secondary" Align="Align.Center">@EmptyTitle</MudText>
+        @if (!string.IsNullOrEmpty(EmptyText))
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary" Align="Align.Center">@EmptyText</MudText>
+        }
+        @EmptyContent
+    </MudStack>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public bool IsEmpty { get; set; }
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public string LoadingText { get; set; } = "Daten werden geladen...";
+    [Parameter] public string EmptyIcon { get; set; } = Icons.Material.Filled.SearchOff;
+    [Parameter] public string EmptyTitle { get; set; } = "Keine Daten vorhanden";
+    [Parameter] public string? EmptyText { get; set; }
+    [Parameter] public RenderFragment? EmptyContent { get; set; }
+    [Parameter] public RenderFragment? LoadingContent { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -12,4 +12,7 @@ public class FavoritePlayer : BaseModel
     
     [Column("player_id")]
     public int PlayerId { get; set; }
+
+    [Column("player_name")]
+    public string? PlayerName { get; set; }
 }

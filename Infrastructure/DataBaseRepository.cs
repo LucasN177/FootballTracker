@@ -2,48 +2,119 @@ using FootballTracker.Core.Interfaces.Infrastructure;
 using FootballTracker.Core.Interfaces.Response;
 using FootballTracker.Core.Models;
 using FootballTracker.Core.Models.Database;
-using Supabase.Gotrue;
 
 namespace FootballTracker.Infrastructure;
 
 public class DataBaseRepository(Supabase.Client client) : IDataBaseRepository
 {
-    public Task<IResponse<List<Player>>> GetFavoritePlayers()
+    public async Task<IResponse<List<FavoritePlayer>>> GetFavoritePlayers()
     {
-        throw new NotImplementedException();
+        if (CurrentUserId is not { } userId)
+            return Response<List<FavoritePlayer>>.Failure("Not logged in");
+        try
+        {
+            var result = await client.From<FavoritePlayer>().Where(x => x.UserId == userId).Get();
+            return Response<List<FavoritePlayer>>.Success(result.Models);
+        }
+        catch (Exception ex)
+        {
+            return Response<List<FavoritePlayer>>.Failure(ex);
+        }
     }
 
-    public Task<IResponse<List<Team>>> GetFavoriteTeams()
+    public async Task<IResponse<List<FavoriteTeam>>> GetFavoriteTeams()
     {
-        throw new NotImplementedException();
+        if (CurrentUserId is not { } userId)
+            return Response<List<FavoriteTeam>>.Failure("Not logged in");
+        try
+        {
+            var result = await client.From<FavoriteTeam>().Where(x => x.UserId == userId).Get();
+            return Response<List<FavoriteTeam>>.Success(result.Models);
+        }
+        catch (Exception ex)
+        {
+            return Response<List<FavoriteTeam>>.Failure(ex);
+        }
     }
 
     public async Task<IResponse> AddPlayerToFavorites(Player player)
     {
-        if (client.Auth.CurrentSession == null)
+        if (CurrentUserId is not { } userId)
             return Response.Failure("Not logged in", new Exception("Not logged in"));
         var model = new FavoritePlayer
         {
             PlayerId = player.Id,
-            UserId = client.Auth.CurrentSession.User!.Id!
+            PlayerName = player.Name,
+            UserId = userId
         };
-        
-        var result = await client.From<FavoritePlayer>().Insert(model);
-        return result.Model != null ? Response.Success() : Response.Failure("Failed to insert favorite player", new Exception("Failed to insert favorite player"));
+
+        try
+        {
+            var result = await client.From<FavoritePlayer>().Insert(model);
+            return result.Model != null ? Response.Success() : Response.Failure("Failed to insert favorite player", new Exception("Failed to insert favorite player"));
+        }
+        catch (Exception ex)
+        {
+            return Response.Failure(ex.Message, ex);
+        }
     }
 
-    public Task<IResponse> AddTeamToFavorites(Team team)
+    public async Task<IResponse> AddTeamToFavorites(Team team)
     {
-        throw new NotImplementedException();
+        if (CurrentUserId is not { } userId)
+            return Response.Failure("Not logged in", new Exception("Not logged in"));
+        var model = new FavoriteTeam
+        {
+            TeamId = team.Id,
+            TeamName = team.Name,
+            TeamIconUrl = team.LogoUrl,
+            UserId = userId
+        };
+
+        try
+        {
+            var result = await client.From<FavoriteTeam>().Insert(model);
+            return result.Model != null ? Response.Success() : Response.Failure("Failed to insert favorite team", new Exception("Failed to insert favorite team"));
+        }
+        catch (Exception ex)
+        {
+            return Response.Failure(ex.Message, ex);
+        }
     }
 
-    public Task<IResponse> DeletePlayerFromFavorites(Player player)
+    public async Task<IResponse> DeletePlayerFromFavorites(int playerId)
     {
-        throw new NotImplementedException();
+        if (CurrentUserId is not { } userId)
+            return Response.Failure("Not logged in", new Exception("Not logged in"));
+        try
+        {
+            await client.From<FavoritePlayer>()
+                .Where(x => x.UserId == userId && x.PlayerId == playerId)
+                .Delete();
+            return Response.Success();
+        }
+        catch (Exception ex)
+        {
+            return Response.Failure(ex.Message, ex);
+        }
     }
 
-    public Task<IResponse> DeleteTeamFromFavorites(Team team)
+    public async Task<IResponse> DeleteTeamFromFavorites(int teamId)
     {
-        throw new NotImplementedException();
+        if (CurrentUserId is not { } userId)
+            return Response.Failure("Not logged in", new Exception("Not logged in"));
+        try
+        {
+            await client.From<FavoriteTeam>()
+                .Where(x => x.UserId == userId && x.TeamId == teamId)
+                .Delete();
+            return Response.Success();
+        }
+        catch (Exception ex)
+        {
+            return Response.Failure(ex.Message, ex);
+        }
     }
+
+    private string? CurrentUserId => client.Auth.CurrentUser?.Id;
 }

@@ -1,0 +1,27 @@
+<MudPaper Class="ft-page-header pa-5 pa-md-6 mb-5" Elevation="0">
+    <div class="d-flex align-center flex-wrap gap-4">
+        <MudAvatar Size="Size.Large" Class="ft-page-header-icon" Variant="Variant.Filled">
+            <MudIcon Icon="@Icon" />
+        </MudAvatar>
+        <div class="flex-grow-1" style="min-width: 0">
+            <MudText Typo="Typo.h4" Class="ft-page-title">@Title</MudText>
+            @if (!string.IsNullOrEmpty(Subtitle))
+            {
+                <MudText Typo="Typo.body2" Class="ft-page-subtitle">@Subtitle</MudText>
+            }
+        </div>
+        @if (Actions != null)
+        {
+            <div class="d-flex align-center flex-wrap gap-2">
+                @Actions
+            </div>
+        }
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.SportsSoccer;
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

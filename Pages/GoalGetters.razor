@@ -1,52 +1,106 @@
 @page "/GoalGetters"
-@using FootballTracker.Core.Interfaces.Infrastructure
-@using FootballTracker.Core.Models
-@using FootballTracker.Services
-<MudPaper Class="pa-6">
-<MudText Typo="Typo.h4" Class="mb-4 font-weight-bold" Style="margin-top: 30px">
-    Bundesliga Torschützen @AppStateService.SelectedSeason.Name
-</MudText>
+@inherits SeasonPageBase
+@inject TabellenService TabellenService
+@inject NavigationManager NavigationManager
 
-<MudTable T="GoalGetter" Items="_players" Dense="true" Hover="true" Bordered="true" Striped="true">
-    <HeaderContent>
-        <MudTh>Platz</MudTh>
-        <MudTh>Name</MudTh>
-        <MudTh>ID</MudTh>
-        <MudTh>Tore</MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd DataLabel="Platz">@context.Platzierung</MudTd>
-        <MudTd DataLabel="Name">@context.Name</MudTd>
-        <MudTd DataLabel="ID">@context.Id</MudTd>
-        <MudTd DataLabel="Tore">@context.GoalCount</MudTd>
-        <MudTd>
-            <MudIconButton Icon="@(context.IsFavorite ? Icons.Material.Filled.Favorite : Icons.Material.Outlined.FavoriteBorder)" 
-                           Color="@(context.IsFavorite ? Color.Error : Color.Dark)"
-                           OnClick="@(() => ToggleFavorite(context))"/>
-        </MudTd>
-    </RowTemplate>
-</MudTable>
-</MudPaper>
+<PageTitle>Torschützen • Bundesliga Tracker</PageTitle>
+
+<PageHeader Title="Torschützen" Subtitle="@($"Torjägerliste der Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.SportsSoccer">
+    <Actions>
+        <MudTextField @bind-Value="_search" Placeholder="Spieler oder Team suchen" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Clearable="true" Style="min-width: 240px" />
+    </Actions>
+</PageHeader>
+
+<DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!_players.Any()" EmptyTitle="Noch keine Tore in dieser Saison">
+    @if (string.IsNullOrWhiteSpace(_search) && _players.Count >= 3)
+    {
+        <!-- Podium -->
+        <MudGrid Spacing="3" Class="mb-4">
+            @foreach (var (player, index) in _players.Take(3).Select((p, i) => (p, i)))
+            {
+                <MudItem xs="12" sm="4">
+                    <MudPaper Class="@($"ft-card ft-hover-lift ft-podium ft-podium-{index + 1} pa-4")" Elevation="0" Outlined="true"
+                              @onclick="() => OpenPlayer(player)">
+                        <div class="d-flex align-center gap-3">
+                            <div class="ft-podium-rank">@player.Platzierung</div>
+                            <div class="flex-grow-1" style="min-width: 0">
+                                <MudText Typo="Typo.h6" Class="ft-ellipsis">@player.Name</MudText>
+                                <div class="d-flex align-center gap-2">
+                                    @if (player.Team != null)
+                                    {
+                                        <TeamLogo Url="@player.Team.LogoUrl" Name="@player.Team.Name" Size="18" />
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary ft-ellipsis">@player.Team.DisplayName</MudText>
+                                    }
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <MudText Typo="Typo.h4" Class="font-weight-bold">@player.GoalCount</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Tore</MudText>
+                            </div>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+
+    <MudPaper Class="ft-card pa-0 pa-md-2" Elevation="0" Outlined="true">
+        <MudTable T="GoalGetter" Items="FilteredPlayers" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.None"
+                  RowsPerPage="25" OnRowClick="@(args => OpenPlayer(args.Item!))" RowClass="ft-clickable" Class="ft-table">
+            <HeaderContent>
+                <MudTh Style="width: 56px">#</MudTh>
+                <MudTh>Spieler</MudTh>
+                <MudTh Class="d-none d-sm-table-cell">Team</MudTh>
+                <MudTh Class="text-center">Tore</MudTh>
+                <MudTh Style="width: 56px"></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd><span class="ft-rank">@context.Platzierung</span></MudTd>
+                <MudTd>
+                    <div class="d-flex align-center gap-2">
+                        <MudHidden Breakpoint="Breakpoint.SmAndUp">
+                            <TeamLogo Url="@context.Team?.LogoUrl" Name="@context.Team?.Name" Size="20" />
+                        </MudHidden>
+                        <span class="font-weight-medium">@context.Name</span>
+                    </div>
+                </MudTd>
+                <MudTd Class="d-none d-sm-table-cell">
+                    @if (context.Team != null)
+                    {
+                        <div class="d-flex align-center gap-2">
+                            <TeamLogo Url="@context.Team.LogoUrl" Name="@context.Team.Name" Size="22" />
+                            <span>@context.Team.DisplayName</span>
+                        </div>
+                    }
+                </MudTd>
+                <MudTd Class="text-center">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="ma-0 font-weight-bold">@context.GoalCount</MudChip>
+                </MudTd>
+                <MudTd>
+                    <FavoriteButton PlayerId="context.Id" PlayerName="@context.Name" Size="Size.Small" />
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager RowsPerPageString="Zeilen pro Seite:" InfoFormat="{first_item}-{last_item} von {all_items}" PageSizeOptions="[25, 50, 100]" />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</DataState>
 
 @code {
-    [Inject] TabellenService TabellenService { get; set; } = null!;
-    [Inject] AppStateService AppStateService { get; set; } = null!;
-    [Inject] IDataBaseRepository DataBaseRepository { get; set; } = null!;
     private List<GoalGetter> _players = new();
+    private string _search = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    private IEnumerable<GoalGetter> FilteredPlayers => string.IsNullOrWhiteSpace(_search)
+        ? _players
+        : _players.Where(p => p.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                              || (p.Team?.Name.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    protected override async Task LoadDataAsync()
     {
-        _players = await TabellenService.GetGoalGetters("bl1", AppStateService.SelectedSeason.Year);
+        _players = await TabellenService.GetGoalGetters(AppStateService.LeagueShortcut, Season);
     }
 
-    private async Task ToggleFavorite(GoalGetter goalGetter)
-    {
-        goalGetter.IsFavorite = !goalGetter.IsFavorite;
-        var player = new Player()
-        {
-            Name = goalGetter.Name,
-            Id = goalGetter.Id,
-        };
-        var result = await DataBaseRepository.AddPlayerToFavorites(player);
-    }
+    private void OpenPlayer(GoalGetter player) => NavigationManager.NavigateTo($"spieler/{player.Id}");
 }

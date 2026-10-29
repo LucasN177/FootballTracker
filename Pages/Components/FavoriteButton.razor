@@ -1,0 +1,69 @@
+@implements IDisposable
+@inject FavoritesService FavoritesService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<span @onclick:stopPropagation="true">
+<MudTooltip Text="@(IsFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen")">
+    <MudIconButton Icon="@(IsFavorite ? FilledIcon : OutlinedIcon)"
+                   Color="@(IsFavorite ? ActiveColor : Color.Default)"
+                   Size="@Size"
+                   Disabled="_busy"
+                   OnClick="Toggle" />
+</MudTooltip>
+</span>
+
+@code {
+    [Parameter] public int? PlayerId { get; set; }
+    [Parameter] public string? PlayerName { get; set; }
+    [Parameter] public Team? Team { get; set; }
+    [Parameter] public Size Size { get; set; } = Size.Medium;
+
+    private bool _busy;
+
+    private bool IsPlayer => PlayerId.HasValue;
+    private string FilledIcon => IsPlayer ? Icons.Material.Filled.Star : Icons.Material.Filled.Favorite;
+    private string OutlinedIcon => IsPlayer ? Icons.Material.Outlined.StarBorder : Icons.Material.Outlined.FavoriteBorder;
+    private Color ActiveColor => IsPlayer ? Color.Warning : Color.Error;
+
+    private bool IsFavorite => IsPlayer
+        ? FavoritesService.IsFavoritePlayer(PlayerId!.Value)
+        : Team != null && FavoritesService.IsFavoriteTeam(Team.Id);
+
+    protected override async Task OnInitializedAsync()
+    {
+        FavoritesService.Changed += OnFavoritesChanged;
+        await FavoritesService.EnsureLoadedAsync();
+    }
+
+    private async Task Toggle()
+    {
+        if (!FavoritesService.IsLoggedIn)
+        {
+            Snackbar.Add("Bitte melde dich an, um Favoriten zu speichern.", Severity.Info, options =>
+            {
+                options.Action = "Login";
+                options.ActionColor = Color.Primary;
+                options.OnClick = _ => DialogService.ShowAsync<AuthDialog>(null, AuthDialog.Options);
+            });
+            return;
+        }
+
+        _busy = true;
+        var wasFavorite = IsFavorite;
+        var name = IsPlayer ? PlayerName ?? $"Spieler #{PlayerId}" : Team?.Name ?? "Team";
+        var result = IsPlayer
+            ? await FavoritesService.TogglePlayerAsync(PlayerId!.Value, name)
+            : await FavoritesService.ToggleTeamAsync(Team!);
+        _busy = false;
+
+        if (result.IsSuccess)
+            Snackbar.Add(wasFavorite ? $"{name} aus Favoriten entfernt" : $"{name} zu Favoriten hinzugefügt", wasFavorite ? Severity.Normal : Severity.Success);
+        else
+            Snackbar.Add(result.ErrorMessage ?? "Favorit konnte nicht gespeichert werden.", Severity.Error);
+    }
+
+    private void OnFavoritesChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => FavoritesService.Changed -= OnFavoritesChanged;
+}

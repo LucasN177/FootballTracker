@@ -1,0 +1,148 @@
+@page "/favoriten/teams"
+@inherits SeasonPageBase
+@inject FavoritesService FavoritesService
+@inject TabellenService TabellenService
+@inject GameService GameService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Lieblingsteams • Bundesliga Tracker</PageTitle>
+
+<PageHeader Title="Lieblingsteams" Subtitle="@($"Alles zu deinen Teams in der Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.Favorite" />
+
+<LoginRequired Title="Deine Lieblingsteams im Blick" Icon="@Icons.Material.Filled.Favorite"
+               Text="Melde dich an, um Teams zu favorisieren. Du siehst dann Tabellenplatz, Form, letzte Ergebnisse und die nächsten Spiele auf einen Blick.">
+    <MudPaper Class="ft-card pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Team hinzufügen</MudText>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var team in _table.Where(t => !FavoritesService.IsFavoriteTeam(t.Id)).OrderBy(t => t.Name))
+            {
+                <MudChip T="string" Variant="Variant.Outlined" OnClick="() => AddTeam(team)" Class="ma-0">
+                    <AvatarContent>
+                        <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="18" />
+                    </AvatarContent>
+                    <ChildContent>@team.DisplayName</ChildContent>
+                </MudChip>
+            }
+        </div>
+    </MudPaper>
+
+    <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!_favorites.Any()"
+               EmptyIcon="@Icons.Material.Outlined.FavoriteBorder" EmptyTitle="Noch keine Lieblingsteams"
+               EmptyText="Wähle oben ein Team aus oder klicke in Tabelle und Teamübersicht auf das Herz.">
+        <MudGrid Spacing="3">
+            @foreach (var fav in _favorites)
+            {
+                var team = fav.Team;
+                <MudItem xs="12" md="6" xl="4">
+                    <MudPaper Class="ft-card ft-hover-lift h-100" Elevation="0" Outlined="true">
+                        <div class="d-flex align-center gap-3 pa-4">
+                            <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="56" />
+                            <div class="flex-grow-1" style="min-width: 0">
+                                <MudLink Href="@($"TeamDetailsPage/{team.Id}")" Typo="Typo.h6" Color="Color.Inherit" Class="ft-ellipsis d-block">@team.Name</MudLink>
+                                @if (fav.InSeason)
+                                {
+                                    <div class="d-flex align-center gap-2">
+                                        <span class="@($"ft-pos ft-pos-{TablePositions.GetZone(team.TabellenPlatz, _table.Count)}")">@team.TabellenPlatz</span>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@team.Punkte Pkt. • @team.Tore:@team.Gegentore Tore</MudText>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Nicht in der Bundesliga @AppStateService.SelectedSeason.Name</MudText>
+                                }
+                            </div>
+                            <FavoriteButton Team="team" />
+                        </div>
+
+                        @if (fav.InSeason)
+                        {
+                            <MudDivider />
+                            <div class="pa-4">
+                                <div class="d-flex justify-space-between align-center mb-3">
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Form</MudText>
+                                    <FormChips Form="@team.Form" />
+                                </div>
+
+                                @if (fav.LastGame is { } last)
+                                {
+                                    <MudText Typo="Typo.overline" Class="mud-text-secondary d-block">Letztes Spiel</MudText>
+                                    <GameCard Game="last" />
+                                }
+                                @if (fav.NextGame is { } next)
+                                {
+                                    <MudText Typo="Typo.overline" Class="mud-text-secondary d-block mt-2">
+                                        @(next.IsLive ? "Läuft gerade" : $"Nächstes Spiel {next.GetTimeUntil()}")
+                                    </MudText>
+                                    <GameCard Game="next" Highlight="next.IsLive" />
+                                }
+                            </div>
+                        }
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    </DataState>
+</LoginRequired>
+
+@code {
+    private record FavoriteEntry(Team Team, bool InSeason, Game? LastGame, Game? NextGame);
+
+    private List<Team> _table = new();
+    private List<Game> _games = new();
+    private List<FavoriteEntry> _favorites = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        FavoritesService.Changed += OnFavoritesChanged;
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task LoadDataAsync()
+    {
+        await FavoritesService.EnsureLoadedAsync();
+        _table = await TabellenService.GetBundesligaTabelle(Season);
+        _games = await GameService.GetSeasonGamesAsync(Season);
+        BuildFavorites();
+    }
+
+    private void BuildFavorites()
+    {
+        var teamsById = _table.ToDictionary(t => t.Id);
+        _favorites = FavoritesService.Teams
+            .GroupBy(f => f.TeamId)
+            .Select(g =>
+            {
+                var fav = g.First();
+                var inSeason = teamsById.TryGetValue(fav.TeamId, out var team);
+                team ??= new Team { Id = fav.TeamId, Name = fav.TeamName ?? $"Team #{fav.TeamId}", LogoUrl = fav.TeamIconUrl ?? string.Empty };
+                var teamGames = _games.Where(x => x.Involves(team.Id)).OrderBy(x => x.MatchDateTimeUtc).ToList();
+                return new FavoriteEntry(team, inSeason,
+                    teamGames.LastOrDefault(x => x.MatchIsFinished),
+                    teamGames.FirstOrDefault(x => !x.MatchIsFinished));
+            })
+            .OrderBy(f => f.InSeason ? f.Team.TabellenPlatz : int.MaxValue)
+            .ToList();
+    }
+
+    private async Task AddTeam(Team team)
+    {
+        var result = await FavoritesService.ToggleTeamAsync(team);
+        if (result.IsSuccess)
+            Snackbar.Add($"{team.Name} zu Favoriten hinzugefügt", Severity.Success);
+        else
+            Snackbar.Add(result.ErrorMessage ?? "Team konnte nicht hinzugefügt werden.", Severity.Error);
+    }
+
+    private void OnFavoritesChanged() => InvokeAsync(() =>
+    {
+        BuildFavorites();
+        StateHasChanged();
+    });
+
+    public override void Dispose()
+    {
+        FavoritesService.Changed -= OnFavoritesChanged;
+        base.Dispose();
+    }
+}

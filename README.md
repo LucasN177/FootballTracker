@@ -10,11 +10,17 @@ Mit **FootballTracker** kann man Spieltage, Teams und Ergebnisse aus der OpenLig
 
 ## 🚀 Features
 
-- 📅 Spieltage laden  
-- 🏆 Ergebnisse anzeigen  
-- 📊 Einfache Statistiken & kleine Auswertungen  
-- 🔍 Teams & Matches durchsuchen  
-- 🌍 Live-Daten über die OpenLigaDB API  
+- 🏠 **Dashboard** mit Kennzahlen, aktuellem Spieltag, Tabelle und Team-Check
+- 🔴 **Live Scores** mit automatischer Aktualisierung
+- 🏆 **Tabelle** (gesamt, Heim, Auswärts) inkl. Form und farbigen Tabellenzonen
+- 📅 **Spieltage** mit Filtern, Suche und Spieldetails (Torverlauf, Halbzeit, Zuschauer)
+- 👥 **Teams** und **Team-Detailseiten** mit Punkteverlauf, Heim/Auswärts-Bilanz, Torschützen und Spielplan
+- 🥅 **Torschützenliste** mit Suche
+- ⭐ **Player Tracker**: Lieblingsspieler verfolgen – Tore, Elfmeter, Anteil an Teamtoren, Torverlauf pro Spieltag
+- ❤️ **Lieblingsteams** mit letztem und nächstem Spiel
+- 📊 **Statistiken**: Torstatistiken, Performance/Formtabelle und Team-Vergleich inkl. direktem Vergleich
+- 🌙 Dark Mode, Saisonauswahl, Login/Registrierung und Profil (Supabase)
+- 📱 Installierbar als **PWA**
 
 Alles läuft als **Blazor WebAssembly App** direkt im Browser – kein eigenes Backend.
 
@@ -30,9 +36,24 @@ https://lucasn177.github.io/FootballTracker
 
 ## 🛠️ Tech Stack
 
-- ⚡ .NET / Blazor WebAssembly  
-- 🌐 REST API (OpenLigaDB)  
-- 🎨 Standard CSS (kein großes UI Framework)  
+- ⚡ .NET 9 / Blazor WebAssembly (PWA)
+- 🎨 MudBlazor
+- 🌐 REST API (OpenLigaDB)
+- 🔐 Supabase (Auth & Favoriten)
+
+---
+
+## 🔐 Supabase
+
+Login, Profil und Favoriten nutzen Supabase. Die Zugangsdaten werden beim Deployment aus den
+GitHub-Secrets `SUPABASE_URL` und `SUPABASE_KEY` in die `wwwroot/appsettings.json` geschrieben
+(siehe `.github/workflows/deploy.yml`).
+
+Das benötigte Datenbankschema (Tabellen `users`, `favorite_players`, `favorite_teams` inkl.
+Row Level Security) liegt in [`supabase/schema.sql`](supabase/schema.sql) und kann im Supabase
+SQL-Editor ausgeführt werden.
+
+Ohne Zugangsdaten läuft die App trotzdem – Login und Favoriten sind dann deaktiviert.
 
 ---
 
@@ -40,7 +61,7 @@ https://lucasn177.github.io/FootballTracker
 
 ### Voraussetzungen
 
-- Aktuelles .NET SDK
+- .NET 9 SDK
 
 ### Repository klonen
 
@@ -48,3 +69,7 @@ https://lucasn177.github.io/FootballTracker
 git clone https://github.com/lucasn177/FootballTracker.git
 cd FootballTracker
 dotnet run
+```
+
+Für Login und Favoriten lokal `Supabase:Url` und `Supabase:AnonKey` in `wwwroot/appsettings.json`
+eintragen (nicht committen).

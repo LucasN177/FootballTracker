@@ -1,162 +1,265 @@
-@page "/TeamDetailsPage/{TeamId}"
-@using FootballTracker.Core.Models
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+@page "/TeamDetailsPage/{TeamId:int}"
+@inherits SeasonPageBase
+@inject TeamService TeamService
+@inject GameService GameService
+@inject StatisticsService StatisticsService
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 
-    <!-- HERO HEADER -->
-    <MudPaper Class="hero-section d-flex align-end" Elevation="0" >
-        <MudContainer MaxWidth="MaxWidth.Large">
-            <MudGrid AlignItems="Center" Class="pb-6">
-                
-                    
-                
+<PageTitle>@(_team?.Name ?? "Team") • Bundesliga Tracker</PageTitle>
 
-                <MudItem xs="12" md="10">
-                    <MudText Typo="Typo.h3" Class="fw-bold white--text" Color="Color.Dark">
-                        @Team.Name
-                    </MudText>
-                    <MudText Typo="Typo.subtitle1" Class="white--text">
-                        Platz: @Team.TabellenPlatz • Bundesliga
-                    </MudText>
+<DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_team == null"
+           EmptyTitle="Team nicht gefunden" EmptyText="@($"Das Team spielt in der Saison {AppStateService.SelectedSeason.Name} nicht in der Bundesliga.")">
+    <LoadingContent>
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" Class="rounded-lg mb-4" />
+        <MudGrid Spacing="3">
+            @for (var i = 0; i < 4; i++)
+            {
+                <MudItem xs="6" md="3"><MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="90px" Class="rounded-lg" /></MudItem>
+            }
+        </MudGrid>
+    </LoadingContent>
+    <ChildContent>
+        @if (_team is { } team)
+        {
+            <!-- HERO -->
+            <div class="ft-team-hero mb-5">
+                <div class="ft-team-hero-bg" style="@($"background-image: url('{team.LogoUrl}')")"></div>
+                <div class="ft-team-hero-content">
+                    <div class="ft-team-hero-logo">
+                        <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="96" />
+                    </div>
+                    <div class="flex-grow-1" style="min-width: 0">
+                        <MudText Typo="Typo.overline" Class="ft-hero-overline">Saison @AppStateService.SelectedSeason.Name</MudText>
+                        <MudText Typo="Typo.h4" Class="ft-hero-title">@team.Name</MudText>
+                        <div class="d-flex flex-wrap align-center gap-2 mt-2">
+                            @if (team.TabellenPlatz > 0)
+                            {
+                                <MudChip T="string" Color="Color.Surface" Size="Size.Small" Class="ma-0">Platz @team.TabellenPlatz</MudChip>
+                            }
+                            <MudChip T="string" Color="Color.Surface" Size="Size.Small" Class="ma-0">@team.Punkte Punkte</MudChip>
+                            <FormChips Form="@team.Form" />
+                        </div>
+                    </div>
+                    <div class="ft-team-hero-fav">
+                        <FavoriteButton Team="team" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- KENNZAHLEN -->
+            <MudGrid Spacing="3" Class="mb-2">
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Value="@(team.TabellenPlatz > 0 ? $"{team.TabellenPlatz}." : "–")" Label="Tabellenplatz" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.Leaderboard" Color="Color.Info" Value="@($"{team.Siege} / {team.Unentschieden} / {team.Niederlagen}")" Label="Siege / Remis / Niederl." />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Success" Value="@($"{team.Tore}:{team.Gegentore}")" Label="Torverhältnis" Hint="@($"{(team.Differenz > 0 ? "+" : "")}{team.Differenz}")" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.Percent" Color="Color.Primary" Value="@($"{_total?.WinRate ?? 0:0}%")" Label="Siegquote" Hint="@($"{_total?.PointsPerGame ?? 0:0.00} Punkte/Spiel")" />
                 </MudItem>
             </MudGrid>
-        </MudContainer>
-    </MudPaper>
-
-    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-n8">
-
-        <!-- TEAM INFOS + STATS -->
-        <MudGrid Spacing="3">
-
-            <!-- LEFT COLUMN -->
-            <MudItem xs="12" md="8">
-                <MudPaper Class="pa-6 rounded-xl" Elevation="4">
-                    <MudText Typo="Typo.h5" Class="mb-4 fw-bold">
-                        Team Informationen
-                    </MudText>
-
-                    <MudGrid>
-                        <MudItem xs="6">
-                            <MudText><b>Stadion:</b> Muster Arena</MudText>
-                            <MudText><b>Kapazität:</b> 52.000</MudText>
-                            <MudText><b>Trainer:</b> Max Mustermann</MudText>
-                        </MudItem>
-
-                        <MudItem xs="6">
-                            <MudText><b>Liga:</b> Bundesliga</MudText>
-                            <MudText><b>Letzte Saison:</b> 3. Platz</MudText>
-                            <MudText><b>Farben:</b> Rot / Weiß</MudText>
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
-            </MudItem>
-
-            <!-- STATS CARDS -->
-            <MudItem xs="12" md="4">
-                <MudGrid Spacing="2">
-
-                    <MudItem xs="4">
-                        <MudPaper Class="pa-4 stat-card" Elevation="4">
-                            <MudText Typo="Typo.h4" Align="Align.Center">@Team.Siege</MudText>
-                            <MudText Align="Align.Center">Won</MudText>
-                        </MudPaper>
-                    </MudItem>
-
-                    <MudItem xs="4">
-                        <MudPaper Class="pa-4 stat-card" Elevation="4">
-                            <MudText Typo="Typo.h4" Align="Align.Center">@Team.Unentschieden</MudText>
-                            <MudText Align="Align.Center">Remis</MudText>
-                        </MudPaper>
-                    </MudItem>
-
-                    <MudItem xs="4">
-                        <MudPaper Class="pa-4 stat-card" Elevation="4">
-                            <MudText Typo="Typo.h4" Align="Align.Center">@Team.Niederlagen</MudText>
-                            <MudText Align="Align.Center">Lost</MudText>
-                        </MudPaper>
-                    </MudItem>
-
-                </MudGrid>
-            </MudItem>
-
-        </MudGrid>
-
-        <!-- SPIELER GRID -->
-        <MudPaper Class="pa-6 mt-6 rounded-xl" Elevation="4">
-            <MudText Typo="Typo.h5" Class="mb-4 fw-bold">
-                Kader
-            </MudText>
 
             <MudGrid Spacing="3">
-                @foreach (var player in Players)
-                {
-                    <MudItem xs="12" sm="6" md="4" lg="3">
-                        <MudCard Class="rounded-xl">
-                            <MudCardMedia Image="@player.Image" Height="200" />
-                            <MudCardContent>
-                                <MudText Typo="Typo.subtitle1" Class="fw-bold">
-                                    @player.Name
-                                </MudText>
-                                <MudText Typo="Typo.body2">
-                                    @player.Position
-                                </MudText>
-                                <MudChip T="int" Class="mt-2" Color="Color.Primary" Variant="Variant.Filled">
-                                    #@player.Number
-                                </MudChip>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                }
+                <!-- Punkteverlauf -->
+                <MudItem xs="12" lg="8">
+                    <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6" Class="mb-1">Punkteverlauf</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Kumulierte Punkte im Vergleich zum Tabellenführer</MudText>
+                        @if (_playedMatchDays > 0)
+                        {
+                            <MudChart ChartType="ChartType.Line" ChartSeries="@_pointsSeries" XAxisLabels="@_matchDayLabels"
+                                      Width="100%" Height="300px" ChartOptions="@_lineOptions" />
+                        }
+                        else
+                        {
+                            <MudText Class="mud-text-secondary py-8" Align="Align.Center">Noch keine Spiele absolviert.</MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Heim / Auswärts -->
+                <MudItem xs="12" lg="4">
+                    <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6" Class="mb-3">Heim & Auswärts</MudText>
+                        @foreach (var (label, record, icon) in new[] { ("Heim", _home, Icons.Material.Filled.Home), ("Auswärts", _away, Icons.Material.Filled.FlightTakeoff) })
+                        {
+                            <div class="mb-4">
+                                <div class="d-flex align-center gap-2 mb-1">
+                                    <MudIcon Icon="@icon" Size="Size.Small" Class="mud-text-secondary" />
+                                    <MudText Typo="Typo.subtitle2" Class="flex-grow-1">@label</MudText>
+                                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">@(record?.Points ?? 0) Pkt.</MudText>
+                                </div>
+                                <div class="ft-wdl-bar">
+                                    <span class="win" style="@WdlWidth(record?.Won, record?.Played)"></span>
+                                    <span class="draw" style="@WdlWidth(record?.Draw, record?.Played)"></span>
+                                    <span class="loss" style="@WdlWidth(record?.Lost, record?.Played)"></span>
+                                </div>
+                                <div class="d-flex justify-space-between mt-1">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(record?.Won ?? 0)S • @(record?.Draw ?? 0)U • @(record?.Lost ?? 0)N</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(record?.GoalsFor ?? 0):@(record?.GoalsAgainst ?? 0) Tore</MudText>
+                                </div>
+                            </div>
+                        }
+                        <MudDivider Class="mb-3" />
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.body2">Zu-Null-Spiele</MudText>
+                            <MudText Typo="Typo.body2" Class="font-weight-bold">@(_total?.CleanSheets ?? 0)</MudText>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Torschützen -->
+                <MudItem xs="12" md="5">
+                    <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6" Class="mb-3">Torschützen</MudText>
+                        @if (!_scorers.Any())
+                        {
+                            <MudText Class="mud-text-secondary">Noch keine Tore erzielt.</MudText>
+                        }
+                        else
+                        {
+                            <MudList T="PlayerSeasonStats" Dense="true" Padding="false">
+                                @foreach (var player in _scorers.Take(8))
+                                {
+                                    <MudListItem T="PlayerSeasonStats" OnClick="@(() => NavigationManager.NavigateTo($"spieler/{player.PlayerId}"))">
+                                        <div class="d-flex align-center gap-3">
+                                            <MudAvatar Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@player.GoalCount</MudAvatar>
+                                            <div class="flex-grow-1" style="min-width:0">
+                                                <MudText Typo="Typo.body2" Class="font-weight-medium ft-ellipsis">@player.Name</MudText>
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                                    @(player.PenaltyCount > 0 ? $"{player.PenaltyCount} Elfmeter • " : "")Liga-Rang @player.Rank
+                                                </MudText>
+                                            </div>
+                                            <MudProgressLinear Value="@(100.0 * player.GoalCount / Math.Max(1, team.Tore))" Color="Color.Primary" Rounded="true" Style="max-width: 80px" />
+                                        </div>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Spielplan -->
+                <MudItem xs="12" md="7">
+                    <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                        <div class="d-flex align-center justify-space-between mb-2">
+                            <MudText Typo="Typo.h6">Spielplan</MudText>
+                            <MudToggleGroup T="bool" @bind-Value="_showAllGames" Size="Size.Small" Color="Color.Primary" Outlined="true">
+                                <MudToggleItem Value="false" Text="Kompakt" />
+                                <MudToggleItem Value="true" Text="Alle" />
+                            </MudToggleGroup>
+                        </div>
+                        <div class="ft-scroll-list">
+                            @foreach (var game in VisibleGames)
+                            {
+                                var outcome = game.GetOutcomeFor(team.Id);
+                                var opponent = game.GetOpponent(team.Id);
+                                <div class="@($"ft-fixture {(game == _nextGame ? "next" : "")}")" @onclick="() => GameDetailsDialog.Show(DialogService, game)">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary ft-fixture-day">@game.MatchDay.</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary ft-fixture-date">@game.GetFormattedDateTime("dd.MM.")</MudText>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0 ft-fixture-venue">@(game.IsHomeTeam(team.Id) ? "H" : "A")</MudChip>
+                                    <TeamLogo Url="@opponent.LogoUrl" Name="@opponent.Name" Size="22" />
+                                    <MudText Typo="Typo.body2" Class="flex-grow-1 ft-ellipsis">@opponent.DisplayName</MudText>
+                                    @if (outcome.HasValue)
+                                    {
+                                        var (own, other) = game.GetGoalsFor(team.Id);
+                                        <MudChip T="string" Size="Size.Small" Color="@GameExtensions.GetOutcomeColor(outcome)" Class="ma-0 ft-result-chip">@own:@other</MudChip>
+                                    }
+                                    else if (game.IsLive)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Class="ma-0 ft-pulse ft-result-chip">@game.GetScoreDisplay(":")</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary ft-result-chip text-center">@game.GetFormattedDateTime("HH:mm")</MudText>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </MudPaper>
+                </MudItem>
             </MudGrid>
-        </MudPaper>
+        }
+    </ChildContent>
+</DataState>
 
-        <!-- LETZTE SPIELE -->
-        <MudPaper Class="pa-6 mt-6 mb-10 rounded-xl" Elevation="4">
-            <MudText Typo="Typo.h5" Class="mb-4 fw-bold">
-                Letzte Spiele
-            </MudText>
+@code {
+    [Parameter] public int TeamId { get; set; }
 
-            <MudTimeline>
-                @foreach (var match in Matches)
-                {
-                    @if (match.FinalResult != null)
-                    {
-                        match.MatchResults.Add(new MatchResult(){ResultTypeId = 2});
-                    }
+    private Team? _team;
+    private List<Game> _games = new();
+    private Game? _nextGame;
+    private TeamRecord? _total, _home, _away;
+    private List<PlayerSeasonStats> _scorers = new();
+    private int _playedMatchDays;
+    private bool _showAllGames;
 
-                    <MudTimelineItem Color="Color.Primary">
-                            <MudText Typo="Typo.subtitle2">@match.MatchDateTime</MudText>
-                            <MudText>@match.Team1.ShortName vs @match.Team2.ShortName</MudText>
-                            <MudChip T="string" Color="@GetResultColor(match)" Variant="Variant.Filled">
-                                @match.DisplayResult
-                            </MudChip>
-                            </MudTimelineItem> 
-                    
-                }
-            </MudTimeline>
-        </MudPaper>
+    private List<ChartSeries> _pointsSeries = new();
+    private string[] _matchDayLabels = [];
+    private readonly ChartOptions _lineOptions = new()
+    {
+        ChartPalette = ["#d20a11", "#9ca3af"],
+        LineStrokeWidth = 3,
+        InterpolationOption = InterpolationOption.Straight,
+        YAxisTicks = 10
+    };
 
-    </MudContainer>
-</MudContainer>
-
-
-<style>
-    .hero-section {
-        height: 320px;
-        background: linear-gradient(rgba(0,0,0,.1), rgba(0,0,0,.1)), url("@Team.LogoUrl");
-        background-size: cover;
-        background-position: center;
+    private IEnumerable<Game> VisibleGames
+    {
+        get
+        {
+            if (_showAllGames)
+                return _games;
+            // Kompakt: letzte fünf Ergebnisse und die nächsten drei Spiele
+            var played = _games.Where(g => g.MatchIsFinished).TakeLast(5);
+            var upcoming = _games.Where(g => !g.MatchIsFinished).Take(3);
+            return played.Concat(upcoming);
+        }
     }
 
-    .rounded-xl {
-        border-radius: 20px;
+    private int? _loadedTeamId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Navigation zwischen Teamseiten verwendet dieselbe Komponenteninstanz
+        if (_loadedTeamId.HasValue && _loadedTeamId != TeamId)
+            await ReloadAsync();
     }
 
-    .stat-card {
-        text-align: center;
-        transition: all .2s ease-in-out;
+    protected override async Task LoadDataAsync()
+    {
+        _loadedTeamId = TeamId;
+        _team = await TeamService.GetTeamAsync(Season, TeamId);
+        if (_team == null)
+            return;
+
+        var seasonGames = await GameService.GetSeasonGamesAsync(Season);
+        _games = seasonGames.Where(g => g.Involves(TeamId)).OrderBy(g => g.MatchDateTimeUtc).ToList();
+        _nextGame = _games.FirstOrDefault(g => !g.MatchIsFinished);
+
+        var teamGames = _games;
+        _total = StatisticsService.BuildRecords(teamGames).FirstOrDefault(r => r.Team.Id == TeamId);
+        _home = StatisticsService.BuildRecords(teamGames, (g, t) => t.Id == TeamId && g.IsHomeTeam(TeamId)).FirstOrDefault(r => r.Team.Id == TeamId);
+        _away = StatisticsService.BuildRecords(teamGames, (g, t) => t.Id == TeamId && !g.IsHomeTeam(TeamId)).FirstOrDefault(r => r.Team.Id == TeamId);
+
+        var players = await StatisticsService.GetPlayerStatsAsync(Season);
+        _scorers = players.Where(p => p.Team?.Id == TeamId && p.GoalCount > 0).ToList();
+
+        _playedMatchDays = GameService.GetPlayedMatchDays(seasonGames);
+        _matchDayLabels = ChartHelper.MatchDayLabels(_playedMatchDays);
+        var leader = StatisticsService.BuildRecords(seasonGames).FirstOrDefault();
+        _pointsSeries = new List<ChartSeries>
+        {
+            new() { Name = _team.DisplayName, Data = StatisticsService.GetPointsProgression(seasonGames, TeamId, _playedMatchDays) }
+        };
+        if (leader != null && leader.Team.Id != TeamId)
+            _pointsSeries.Add(new ChartSeries { Name = $"{leader.Team.DisplayName} (Tabellenführer)", Data = StatisticsService.GetPointsProgression(seasonGames, leader.Team.Id, _playedMatchDays) });
     }
 
-    .stat-card:hover {
-        transform: translateY(-4px);
-    }
-</style>
+    private static string WdlWidth(int? value, int? total) =>
+        $"width: {(total is > 0 ? 100 * (value ?? 0) / total.Value : 0)}%";
+}

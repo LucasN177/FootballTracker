@@ -1,0 +1,227 @@
+@page "/statistiken/vergleich"
+@inherits SeasonPageBase
+@inject GameService GameService
+@inject TabellenService TabellenService
+@inject IDialogService DialogService
+
+<PageTitle>Team-Vergleich • Bundesliga Tracker</PageTitle>
+
+<PageHeader Title="Team-Vergleich" Subtitle="@($"Zwei Teams direkt gegenüberstellen • Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.CompareArrows" />
+
+<DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_table.Count < 2" EmptyTitle="Nicht genügend Teams verfügbar">
+    <MudPaper Class="ft-card pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid Spacing="2" Class="align-center">
+            <MudItem xs="12" sm="5">
+                <MudSelect T="Team" Value="_team1" ValueChanged="t => SelectTeams(t, _team2)" Label="Team 1" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           ToStringFunc="@(t => t?.Name ?? string.Empty)">
+                    @foreach (var team in _table)
+                    {
+                        <MudSelectItem T="Team" Value="team" Disabled="@(team == _team2)">
+                            <div class="d-flex align-center gap-2"><TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="20" />@team.Name</div>
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="2" Class="d-flex justify-center">
+                <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz" Variant="Variant.Outlined" Color="Color.Primary" OnClick="() => SelectTeams(_team2, _team1)" />
+            </MudItem>
+            <MudItem xs="12" sm="5">
+                <MudSelect T="Team" Value="_team2" ValueChanged="t => SelectTeams(_team1, t)" Label="Team 2" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           ToStringFunc="@(t => t?.Name ?? string.Empty)">
+                    @foreach (var team in _table)
+                    {
+                        <MudSelectItem T="Team" Value="team" Disabled="@(team == _team1)">
+                            <div class="d-flex align-center gap-2"><TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="20" />@team.Name</div>
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @if (_team1 != null && _team2 != null && _record1 != null && _record2 != null)
+    {
+        <MudGrid Spacing="3">
+            <MudItem xs="12" lg="7">
+                <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                    <div class="ft-compare-header mb-4">
+                        <a href="@($"TeamDetailsPage/{_team1.Id}")" class="ft-compare-team">
+                            <TeamLogo Url="@_team1.LogoUrl" Name="@_team1.Name" Size="64" />
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold mt-2" Align="Align.Center">@_team1.Name</MudText>
+                            <FormChips Form="@_team1.Form" />
+                        </a>
+                        <MudText Typo="Typo.h5" Class="mud-text-secondary">vs</MudText>
+                        <a href="@($"TeamDetailsPage/{_team2.Id}")" class="ft-compare-team">
+                            <TeamLogo Url="@_team2.LogoUrl" Name="@_team2.Name" Size="64" />
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold mt-2" Align="Align.Center">@_team2.Name</MudText>
+                            <FormChips Form="@_team2.Form" />
+                        </a>
+                    </div>
+
+                    @foreach (var row in _rows)
+                    {
+                        <div class="ft-compare-row">
+                            <span class="@($"ft-compare-value {(row.Better == 1 ? "better" : "")}")">@row.Display1</span>
+                            <div class="ft-compare-bars">
+                                <MudText Typo="Typo.caption" Align="Align.Center" Class="mud-text-secondary d-block mb-1">@row.Label</MudText>
+                                <div class="d-flex gap-1">
+                                    <div class="ft-compare-bar left"><span style="@($"width:{row.Share1}%")"></span></div>
+                                    <div class="ft-compare-bar right"><span style="@($"width:{row.Share2}%")"></span></div>
+                                </div>
+                            </div>
+                            <span class="@($"ft-compare-value {(row.Better == 2 ? "better" : "")}")">@row.Display2</span>
+                        </div>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" lg="5">
+                <MudStack Spacing="3">
+                    <MudPaper Class="ft-card pa-4 pa-md-5" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6" Class="mb-1">Punkteverlauf</MudText>
+                        <MudChart ChartType="ChartType.Line" ChartSeries="@_series" XAxisLabels="@_labels" Width="100%" Height="240px" ChartOptions="@_lineOptions" />
+                    </MudPaper>
+
+                    <MudPaper Class="ft-card pa-4 pa-md-5" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6" Class="mb-1">Direkter Vergleich</MudText>
+                        @if (_h2hLoading)
+                        {
+                            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-4" />
+                        }
+                        else if (!_headToHead.Any())
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">Keine Begegnungen gefunden.</MudText>
+                        }
+                        else
+                        {
+                            <div class="d-flex justify-space-around text-center my-3">
+                                <div>
+                                    <MudText Typo="Typo.h5" Color="Color.Success" Class="font-weight-bold">@_h2hWins1</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Siege @_team1.DisplayName</MudText>
+                                </div>
+                                <div>
+                                    <MudText Typo="Typo.h5" Color="Color.Warning" Class="font-weight-bold">@_h2hDraws</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Remis</MudText>
+                                </div>
+                                <div>
+                                    <MudText Typo="Typo.h5" Color="Color.Info" Class="font-weight-bold">@_h2hWins2</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Siege @_team2.DisplayName</MudText>
+                                </div>
+                            </div>
+                            <MudText Typo="Typo.overline" Class="mud-text-secondary d-block">Letzte Begegnungen (alle Wettbewerbe)</MudText>
+                            <MudStack Spacing="1">
+                                @foreach (var game in _headToHead.Take(6))
+                                {
+                                    <div class="d-flex align-center gap-2">
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="min-width: 64px">@game.GetFormattedDateTime("dd.MM.yy")</MudText>
+                                        <div class="flex-grow-1"><GameCard Game="game" /></div>
+                                    </div>
+                                }
+                            </MudStack>
+                        }
+                    </MudPaper>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    }
+</DataState>
+
+@code {
+    private record CompareRow(string Label, string Display1, string Display2, double Share1, double Share2, int Better);
+
+    private List<Team> _table = new();
+    private List<Game> _games = new();
+    private Team? _team1, _team2;
+    private TeamRecord? _record1, _record2;
+    private List<CompareRow> _rows = new();
+    private List<ChartSeries> _series = new();
+    private string[] _labels = [];
+    private List<Game> _headToHead = new();
+    private bool _h2hLoading;
+    private int _h2hWins1, _h2hWins2, _h2hDraws;
+
+    private readonly ChartOptions _lineOptions = new() { ChartPalette = ["#d20a11", "#1976d2"], LineStrokeWidth = 3, InterpolationOption = InterpolationOption.Straight };
+
+    protected override async Task LoadDataAsync()
+    {
+        _games = await GameService.GetSeasonGamesAsync(Season);
+        _table = await TabellenService.GetBundesligaTabelle(Season);
+        // Bei Saisonwechsel die bisherige Auswahl beibehalten, sofern beide Teams noch in der Liga sind
+        var team1 = _table.FirstOrDefault(t => t.Id == _team1?.Id) ?? _table.ElementAtOrDefault(0);
+        var team2 = _table.FirstOrDefault(t => t.Id == _team2?.Id) ?? _table.ElementAtOrDefault(1);
+        await SelectTeams(team1, team2);
+    }
+
+    private async Task SelectTeams(Team? team1, Team? team2)
+    {
+        _team1 = team1;
+        _team2 = team2;
+        if (_team1 == null || _team2 == null)
+            return;
+
+        var records = StatisticsService.BuildRecords(_games);
+        _record1 = records.FirstOrDefault(r => r.Team.Id == _team1.Id) ?? new TeamRecord { Team = _team1 };
+        _record2 = records.FirstOrDefault(r => r.Team.Id == _team2.Id) ?? new TeamRecord { Team = _team2 };
+        var home1 = HomeAway(_team1.Id, true);
+        var home2 = HomeAway(_team2.Id, true);
+        var away1 = HomeAway(_team1.Id, false);
+        var away2 = HomeAway(_team2.Id, false);
+
+        _rows =
+        [
+            Row("Tabellenplatz", _team1.TabellenPlatz, _team2.TabellenPlatz, higherIsBetter: false),
+            Row("Punkte", _record1.Points, _record2.Points),
+            Row("Punkte pro Spiel", _record1.PointsPerGame, _record2.PointsPerGame, "0.00"),
+            Row("Siege", _record1.Won, _record2.Won),
+            Row("Niederlagen", _record1.Lost, _record2.Lost, higherIsBetter: false),
+            Row("Tore", _record1.GoalsFor, _record2.GoalsFor),
+            Row("Gegentore", _record1.GoalsAgainst, _record2.GoalsAgainst, higherIsBetter: false),
+            Row("Zu-Null-Spiele", _record1.CleanSheets, _record2.CleanSheets),
+            Row("Heimpunkte", home1, home2),
+            Row("Auswärtspunkte", away1, away2),
+        ];
+
+        var matchDays = GameService.GetPlayedMatchDays(_games);
+        _labels = ChartHelper.MatchDayLabels(matchDays);
+        _series =
+        [
+            new ChartSeries { Name = _team1.DisplayName, Data = StatisticsService.GetPointsProgression(_games, _team1.Id, matchDays) },
+            new ChartSeries { Name = _team2.DisplayName, Data = StatisticsService.GetPointsProgression(_games, _team2.Id, matchDays) }
+        ];
+
+        await LoadHeadToHead();
+    }
+
+    private async Task LoadHeadToHead()
+    {
+        _h2hLoading = true;
+        StateHasChanged();
+        try
+        {
+            _headToHead = await GameService.GetHeadToHeadAsync(_team1!.Id, _team2!.Id);
+        }
+        catch (HttpRequestException)
+        {
+            _headToHead = new();
+        }
+        _h2hWins1 = _headToHead.Count(g => g.GetOutcomeFor(_team1!.Id) == 'S');
+        _h2hWins2 = _headToHead.Count(g => g.GetOutcomeFor(_team2!.Id) == 'S');
+        _h2hDraws = _headToHead.Count(g => g.GetOutcomeFor(_team1!.Id) == 'U');
+        _h2hLoading = false;
+    }
+
+    private int HomeAway(int teamId, bool home) =>
+        StatisticsService.BuildRecords(_games, (g, t) => t.Id == teamId && g.IsHomeTeam(teamId) == home)
+            .FirstOrDefault(r => r.Team.Id == teamId)?.Points ?? 0;
+
+    private static CompareRow Row(string label, double value1, double value2, string format = "0", bool higherIsBetter = true)
+    {
+        var total = value1 + value2;
+        var share1 = total == 0 ? 50 : value1 / total * 100;
+        var share2 = total == 0 ? 50 : value2 / total * 100;
+        if (!higherIsBetter && total > 0)
+            (share1, share2) = (share2, share1);
+        var better = value1.Equals(value2) ? 0 : (value1 > value2) == higherIsBetter ? 1 : 2;
+        return new CompareRow(label, value1.ToString(format), value2.ToString(format), Math.Round(share1), Math.Round(share2), better);
+    }
+}
