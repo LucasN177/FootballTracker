@@ -1,22 +1,89 @@
 ﻿@page "/"
-@using FootballTracker.Pages.Components
+@inherits SeasonPageBase
+@inject GameService GameService
+@inject StatisticsService StatisticsService
+@inject TabellenService TabellenService
 
-<PageTitle>Dashboard</PageTitle>
+<PageTitle>Dashboard • Bundesliga Tracker</PageTitle>
 
-<MudGrid Style="margin-top: 40px">
-    <MudItem xs="12" sm="12" md="6">
-        <MudItem xs="12">
-            <TableComponent/>   
-        </MudItem>
-        <MudItem xs="12" Style="margin-top: 20px">
-            <GamesChart/>  
-        </MudItem>
-        
+<div class="ft-hero mb-5">
+    <div class="ft-hero-content">
+        <MudText Typo="Typo.overline" Class="ft-hero-overline">1. Fußball-Bundesliga</MudText>
+        <MudText Typo="Typo.h3" Class="ft-hero-title">Saison @AppStateService.SelectedSeason.Name</MudText>
+        <MudText Typo="Typo.body1" Class="ft-hero-text">
+            @if (IsLoading)
+            {
+                <span>Daten werden geladen...</span>
+            }
+            else if (_leader != null)
+            {
+                <span>@_leader.Name führt nach @_playedMatchDays Spieltagen mit @_leader.Punkte Punkten.</span>
+            }
+        </MudText>
+        <div class="d-flex flex-wrap gap-2 mt-4">
+            <MudButton Href="live" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.LiveTv" Class="ft-hero-button">Live Scores</MudButton>
+            <MudButton Href="FavSpieler" Variant="Variant.Outlined" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Star">Player Tracker</MudButton>
+        </div>
+    </div>
+    <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Class="ft-hero-ball" />
+</div>
+
+<MudGrid Spacing="3" Class="mb-2">
+    <MudItem xs="6" md="3">
+        <StatCard Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Info" Label="Spieltag" Value="@(IsLoading ? "…" : $"{_currentMatchDay} / {GameService.MatchDaysPerSeason}")" Hint="@(_liveGames > 0 ? $"{_liveGames} Spiele live" : null)" />
     </MudItem>
-    <MudItem xs="12" sm="12" md="6">
-        <MudItem xs="12" sm="12" md="12">
-            <Ergebnisse/>
-        </MudItem>
+    <MudItem xs="6" md="3">
+        <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Success" Label="Tore gesamt" Value="@(IsLoading ? "…" : _totalGoals.ToString())" Hint="@(IsLoading ? null : $"{_goalsPerGame:0.00} pro Spiel")" />
     </MudItem>
-    
+    <MudItem xs="6" md="3">
+        <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Label="Tabellenführer" Value="@(_leader?.DisplayName ?? "–")" Hint="@(_leader != null ? $"{_leader.Punkte} Punkte" : null)" />
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <StatCard Icon="@Icons.Material.Filled.Whatshot" Color="Color.Primary" Label="Top-Torschütze" Value="@(_topScorer?.Name ?? "–")" Hint="@(_topScorer != null ? $"{_topScorer.GoalCount} Tore" : null)" />
+    </MudItem>
 </MudGrid>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-3">Einige Kennzahlen konnten nicht geladen werden: @ErrorMessage</MudAlert>
+}
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" lg="7">
+        <Ergebnisse />
+    </MudItem>
+    <MudItem xs="12" lg="5">
+        <MudStack Spacing="3">
+            <TableComponent Count="8" />
+            <GamesChart />
+        </MudStack>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private int _currentMatchDay;
+    private int _playedMatchDays;
+    private int _liveGames;
+    private int _totalGoals;
+    private double _goalsPerGame;
+    private Team? _leader;
+    private PlayerSeasonStats? _topScorer;
+
+    protected override async Task LoadDataAsync()
+    {
+        _leader = null;
+        _topScorer = null;
+        var games = await GameService.GetSeasonGamesAsync(Season);
+        _currentMatchDay = await GameService.GetCurrentMatchDay(Season);
+        _playedMatchDays = GameService.GetPlayedMatchDays(games);
+        _liveGames = games.Count(g => g.IsLive);
+
+        var finished = games.Where(g => g.MatchIsFinished && g.FinalResult != null).ToList();
+        _totalGoals = finished.Sum(g => g.FinalResult!.PointsTeam1 + g.FinalResult.PointsTeam2);
+        _goalsPerGame = finished.Count == 0 ? 0 : (double)_totalGoals / finished.Count;
+
+        var table = await TabellenService.GetBundesligaTabelle(Season);
+        _leader = table.FirstOrDefault(t => t.Spiele > 0);
+        _topScorer = (await StatisticsService.GetPlayerStatsAsync(Season)).FirstOrDefault();
+    }
+}

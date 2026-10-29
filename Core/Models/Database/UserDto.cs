@@ -6,16 +6,15 @@ namespace FootballTracker.Core.Models.Database;
 [Table("users")]
 public class UserDto : BaseModel
 {
-    [Column("id")]
-    [PrimaryKey]
+    [PrimaryKey("id", true)]
     public string UserId { get; set; } = string.Empty;
-    
-    [Column("username")] 
+
+    [Column("username")]
     public string Username { get; set; } = string.Empty;
-    
-    [Column("vorname")] 
+
+    [Column("vorname")]
     public string Vorname { get; set; } = string.Empty;
-    
-    [Column("nachname")] 
+
+    [Column("nachname")]
     public string Nachname { get; set; } = string.Empty;
 }

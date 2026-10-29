@@ -1,0 +1,32 @@
+<div class="ft-goal-label">
+    <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Size="Size.Small" Color="@(Event.Goal.IsOwnGoal ? Color.Error : Color.Default)" />
+    @if (Event.Goal.GoalGetterId > 0)
+    {
+        <MudLink Typo="Typo.body2" Color="Color.Inherit" Class="font-weight-medium" OnClick="() => OnPlayerClick.InvokeAsync(Event)" Style="cursor:pointer">
+            @DisplayName
+        </MudLink>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="font-weight-medium">@DisplayName</MudText>
+    }
+    @if (Event.Goal.IsPenalty)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined" Class="ma-0">Elfmeter</MudChip>
+    }
+    @if (Event.Goal.IsOwnGoal)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined" Class="ma-0">Eigentor</MudChip>
+    }
+    @if (Event.Goal.IsOvertime)
+    {
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0">Nachspielzeit</MudChip>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GoalEvent Event { get; set; } = null!;
+    [Parameter] public EventCallback<GoalEvent> OnPlayerClick { get; set; }
+
+    private string DisplayName => string.IsNullOrWhiteSpace(Event.Goal.GoalGetterName) ? "Unbekannt" : Event.Goal.GoalGetterName.Trim();
+}

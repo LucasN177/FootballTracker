@@ -5,11 +5,11 @@ namespace FootballTracker.Core.Models;
 public class Group
 {
     [JsonPropertyName("groupName")]
-    public required string GroupName { get; set; }
+    public string GroupName { get; set; } = string.Empty;
     
-    [JsonPropertyName("groupOrderId")]
-    public required int GroupOrderId { get; set; }
+    [JsonPropertyName("groupOrderID")]
+    public int GroupOrderId { get; set; }
     
-    [JsonPropertyName("groupId")]
-    public required int GroupId { get; set; }
+    [JsonPropertyName("groupID")]
+    public int GroupId { get; set; }
 }

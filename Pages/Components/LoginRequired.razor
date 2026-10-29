@@ -1,0 +1,47 @@
+@implements IDisposable
+@inject IAuthService AuthService
+@inject IDialogService DialogService
+
+@if (AuthService.IsLoggedIn)
+{
+    @ChildContent
+}
+else
+{
+    <MudPaper Class="pa-8 ft-card" Elevation="0" Outlined="true">
+        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Text" Style="width:72px;height:72px">
+                <MudIcon Icon="@Icon" Style="font-size: 2.5rem" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6" Align="Align.Center">@Title</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary" Align="Align.Center" Style="max-width: 480px">@Text</MudText>
+            @if (AuthService.IsConfigured)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login" Class="mt-2" OnClick="OpenLogin">
+                    Anmelden oder registrieren
+                </MudButton>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                    Supabase ist in dieser Umgebung nicht konfiguriert.
+                </MudAlert>
+            }
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public string Title { get; set; } = "Anmeldung erforderlich";
+    [Parameter] public string Text { get; set; } = "Melde dich an, um diese Funktion zu nutzen.";
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Lock;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized() => AuthService.AuthStateChanged += OnAuthChanged;
+
+    private Task OpenLogin() => DialogService.ShowAsync<AuthDialog>(null, AuthDialog.Options);
+
+    private void OnAuthChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => AuthService.AuthStateChanged -= OnAuthChanged;
+}

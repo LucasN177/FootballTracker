@@ -1,0 +1,184 @@
+@page "/spieler/{PlayerId:int}"
+@inherits SeasonPageBase
+@inject StatisticsService StatisticsService
+@inject GameService GameService
+@inject FavoritesService FavoritesService
+@inject IDialogService DialogService
+
+<PageTitle>@(_player?.Name ?? "Spieler") • Bundesliga Tracker</PageTitle>
+
+<DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_player == null"
+           EmptyIcon="@Icons.Material.Filled.PersonOff"
+           EmptyTitle="@($"{FallbackName} hat in der Saison {AppStateService.SelectedSeason.Name} kein Tor erzielt")"
+           EmptyText="OpenLigaDB liefert nur Daten zu Torschützen. Wähle oben eine andere Saison, um ältere Daten zu sehen.">
+    <EmptyContent>
+        <div class="d-flex gap-2 mt-3">
+            <MudButton Href="FavSpieler" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Star">Player Tracker</MudButton>
+            <FavoriteButton PlayerId="PlayerId" PlayerName="@FallbackName" />
+        </div>
+    </EmptyContent>
+    <ChildContent>
+        @if (_player is { } player)
+        {
+            <div class="ft-hero mb-5">
+                <div class="ft-hero-content d-flex align-center flex-wrap gap-4">
+                    <MudAvatar Class="ft-player-hero-avatar">@player.GoalCount</MudAvatar>
+                    <div class="flex-grow-1" style="min-width: 0">
+                        <MudText Typo="Typo.overline" Class="ft-hero-overline">Player Tracker • Saison @AppStateService.SelectedSeason.Name</MudText>
+                        <MudText Typo="Typo.h4" Class="ft-hero-title">@player.Name</MudText>
+                        @if (player.Team is { } team)
+                        {
+                            <a href="@($"TeamDetailsPage/{team.Id}")" class="d-inline-flex align-center gap-2 mt-1 ft-hero-link">
+                                <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="24" />
+                                <span>@team.Name</span>
+                            </a>
+                        }
+                    </div>
+                    <div class="ft-hero-fav">
+                        <FavoriteButton PlayerId="player.PlayerId" PlayerName="@player.Name" />
+                    </div>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Class="ft-hero-ball" />
+            </div>
+
+            <MudGrid Spacing="3" Class="mb-2">
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Success" Value="@player.GoalCount.ToString()" Label="Tore" Hint="@($"Rang {player.Rank} der Liga")" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.Percent" Color="Color.Primary" Value="@($"{TeamShare:0}%")" Label="Anteil an Teamtoren" Hint="@(_teamGoals > 0 ? $"{_teamGoals} Teamtore" : null)" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.GpsFixed" Color="Color.Info" Value="@player.PenaltyCount.ToString()" Label="Elfmetertore" Hint="@(player.Doubles > 0 ? $"{player.Doubles}× Doppelpack+" : null)" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.Timer" Color="Color.Warning" Value="@(player.AverageMinute is { } m ? $"{m:0}'" : "–")" Label="Ø Torminute" Hint="@(player.OwnGoalCount > 0 ? $"{player.OwnGoalCount} Eigentor(e)" : null)" />
+                </MudItem>
+            </MudGrid>
+
+            <MudGrid Spacing="3">
+                <MudItem xs="12" lg="8">
+                    <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6">Saisonverlauf</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Tore pro Spieltag und kumuliert</MudText>
+                        <MudTabs Elevation="0" Rounded="true" PanelClass="pt-2" Color="Color.Transparent" SliderColor="Color.Primary" MinimumTabWidth="90px">
+                            <MudTabPanel Text="Kumuliert">
+                                <MudChart ChartType="ChartType.Line" ChartSeries="@_cumulativeSeries" XAxisLabels="@_labels" Width="100%" Height="280px" ChartOptions="@_lineOptions" />
+                            </MudTabPanel>
+                            <MudTabPanel Text="Pro Spieltag">
+                                <MudChart ChartType="ChartType.Bar" ChartSeries="@_perDaySeries" XAxisLabels="@_labels" Width="100%" Height="280px" ChartOptions="@_barOptions" />
+                            </MudTabPanel>
+                        </MudTabs>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" lg="4">
+                    <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6">Torzeitpunkte</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Tore je Viertelstunde</MudText>
+                        <MudChart ChartType="ChartType.Bar" ChartSeries="@_minuteSeries" XAxisLabels="@StatisticsService.MinuteBucketLabels" Width="100%" Height="280px" ChartOptions="@_minuteOptions" />
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudPaper Class="ft-card pa-0 pa-md-2" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6" Class="pa-4 pb-0">Alle Tore</MudText>
+                        <MudTable T="GoalEvent" Items="_goals" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.None"
+                                  OnRowClick="@(args => GameDetailsDialog.Show(DialogService, args.Item!.Game))" RowClass="ft-clickable" Class="ft-table">
+                            <HeaderContent>
+                                <MudTh>Sp.</MudTh>
+                                <MudTh>Datum</MudTh>
+                                <MudTh>Gegner</MudTh>
+                                <MudTh Class="text-center">Min.</MudTh>
+                                <MudTh Class="text-center">Stand</MudTh>
+                                <MudTh Class="text-center d-none d-sm-table-cell">Endstand</MudTh>
+                                <MudTh>Art</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context.MatchDay.</MudTd>
+                                <MudTd class="ft-nowrap">@context.Game.GetFormattedDateTime("dd.MM.yy")</MudTd>
+                                <MudTd>
+                                    <div class="d-flex align-center gap-2">
+                                        <TeamLogo Url="@context.Opponent.LogoUrl" Name="@context.Opponent.Name" Size="20" />
+                                        <span class="ft-ellipsis">@context.Opponent.DisplayName</span>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">(@(context.Game.IsHomeTeam(context.PlayerTeam.Id) ? "H" : "A"))</MudText>
+                                    </div>
+                                </MudTd>
+                                <MudTd Class="text-center">@(context.Goal.MatchMinute?.ToString() ?? "?")'</MudTd>
+                                <MudTd Class="text-center">@context.Goal.ScoreTeam1:@context.Goal.ScoreTeam2</MudTd>
+                                <MudTd Class="text-center d-none d-sm-table-cell">
+                                    @{ var outcome = context.Game.GetOutcomeFor(context.PlayerTeam.Id); }
+                                    <MudChip T="string" Size="Size.Small" Color="@GameExtensions.GetOutcomeColor(outcome)" Variant="@(outcome.HasValue ? Variant.Filled : Variant.Outlined)" Class="ma-0">
+                                        @context.Game.GetScoreDisplay(":")
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd>
+                                    @if (context.Goal.IsOwnGoal)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined" Class="ma-0">Eigentor</MudChip>
+                                    }
+                                    else if (context.Goal.IsPenalty)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined" Class="ma-0">Elfmeter</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Feldtor</MudText>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        }
+    </ChildContent>
+</DataState>
+
+@code {
+    [Parameter] public int PlayerId { get; set; }
+
+    private PlayerSeasonStats? _player;
+    private List<GoalEvent> _goals = new();
+    private int _teamGoals;
+    private string[] _labels = [];
+    private List<ChartSeries> _cumulativeSeries = new();
+    private List<ChartSeries> _perDaySeries = new();
+    private List<ChartSeries> _minuteSeries = new();
+    private int? _loadedPlayerId;
+
+    private readonly ChartOptions _lineOptions = new() { ChartPalette = ["#d20a11"], LineStrokeWidth = 3, InterpolationOption = InterpolationOption.Straight };
+    private readonly ChartOptions _barOptions = new() { ChartPalette = ["#2e7d32"], YAxisTicks = 1 };
+    private readonly ChartOptions _minuteOptions = new() { ChartPalette = ["#1976d2"], YAxisTicks = 1 };
+
+    private double TeamShare => _teamGoals == 0 || _player == null ? 0 : 100.0 * _player.GoalCount / _teamGoals;
+
+    private string FallbackName => FavoritesService.Players.FirstOrDefault(p => p.PlayerId == PlayerId)?.PlayerName ?? $"Spieler #{PlayerId}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedPlayerId.HasValue && _loadedPlayerId != PlayerId)
+            await ReloadAsync();
+    }
+
+    protected override async Task LoadDataAsync()
+    {
+        _loadedPlayerId = PlayerId;
+        await FavoritesService.EnsureLoadedAsync();
+        _player = await StatisticsService.GetPlayerAsync(Season, PlayerId);
+        if (_player == null)
+            return;
+
+        var games = await GameService.GetSeasonGamesAsync(Season);
+        var playedMatchDays = Math.Max(1, GameService.GetPlayedMatchDays(games));
+        _labels = ChartHelper.MatchDayLabels(playedMatchDays);
+        _goals = _player.Events.OrderByDescending(e => e.Game.MatchDateTimeUtc).ThenByDescending(e => e.Goal.MatchMinute).ToList();
+
+        _teamGoals = _player.Team == null
+            ? 0
+            : StatisticsService.GetGoalEvents(games).Count(e => e.ScoringTeam.Id == _player.Team.Id);
+
+        _cumulativeSeries = [new ChartSeries { Name = "Tore", Data = _player.CumulativeGoals(playedMatchDays) }];
+        _perDaySeries = [new ChartSeries { Name = "Tore", Data = _player.GoalsPerMatchDay(playedMatchDays) }];
+        _minuteSeries = [new ChartSeries { Name = "Tore", Data = StatisticsService.GetGoalsByMinute(_player.Goals) }];
+    }
+}

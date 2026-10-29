@@ -1,0 +1,24 @@
+<MudPaper Class="@($"ft-stat-card pa-4 {Class}")" Elevation="0" Outlined="true">
+    <div class="d-flex align-center gap-3">
+        <MudAvatar Color="@Color" Variant="Variant.Text" Size="Size.Large" Class="ft-stat-icon">
+            <MudIcon Icon="@Icon" Color="@Color" />
+        </MudAvatar>
+        <div style="min-width: 0">
+            <MudText Typo="Typo.h6" Class="font-weight-bold ft-stat-value">@Value</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary ft-ellipsis d-block">@Label</MudText>
+            @if (!string.IsNullOrEmpty(Hint))
+            {
+                <MudText Typo="Typo.caption" Color="@Color" Class="ft-ellipsis d-block">@Hint</MudText>
+            }
+        </div>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.BarChart;
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Hint { get; set; }
+    [Parameter] public Color Color { get; set; } = Color.Primary;
+    [Parameter] public string? Class { get; set; }
+}

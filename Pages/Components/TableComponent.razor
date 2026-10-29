@@ -1,53 +1,68 @@
-@using FootballTracker.Core.Models
-@using FootballTracker.Services
+@* Kompakte Tabelle für das Dashboard *@
+@inherits SeasonPageBase
 @inject TabellenService TabellenService
-@inject AppStateService AppStateService
+@inject NavigationManager NavigationManager
 
-    <MudPaper Class="pa-6">
-        <MudText Typo="Typo.h4" Class="mb-4 font-weight-bold">Tabelle
-        </MudText>
+<MudPaper Class="ft-card pa-4 pa-md-5" Elevation="0" Outlined="true">
+    <div class="d-flex align-center justify-space-between mb-3">
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.TableChart" Color="Color.Success" />
+            <MudText Typo="Typo.h6" Class="font-weight-bold">Tabelle</MudText>
+        </div>
+        <MudButton Href="Tabelle" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" EndIcon="@Icons.Material.Filled.ChevronRight">
+            Komplett
+        </MudButton>
+    </div>
 
-        <MudHidden Breakpoint="Breakpoint.SmAndDown">
-            <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" OnRowClick="NavigateToDetailsPage" Breakpoint="Breakpoint.None">
-                <HeaderContent>
-                    <MudTh Style="white-space: nowrap">Platz</MudTh>
-                    <MudTh Style="white-space: nowrap">Team</MudTh>
-                    <MudTh Style="white-space: nowrap">Diff</MudTh>
-                    <MudTh Style="white-space: nowrap">Punkte</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Platz">@context.TabellenPlatz</MudTd>
-                    <MudTd DataLabel="Team">
-                        <MudImage Height="20" Width="20" Class="mr-2" Src="@context.LogoUrl" Style="object-fit: contain" />
-                        @context.ShortName
-                    </MudTd>
-                    <MudTd DataLabel="Diff">@context.Differenz</MudTd>
-                    <MudTd DataLabel="Punkte" Class="font-weight-bold">
-                        @context.Punkte
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
-        </MudHidden>
-        
-        <MudHidden Breakpoint="Breakpoint.MdAndUp">
-            <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" Class="fixed-table" OnRowClick="NavigateToDetailsPage" Breakpoint="Breakpoint.None">
-                <HeaderContent>
-                    <MudTh Style="white-space: nowrap">Pl.</MudTh>
-                    <MudTh Style="white-space: nowrap">Team</MudTh>
-                    <MudTh Style="white-space: nowrap">Diff</MudTh>
-                    <MudTh Style="white-space: nowrap">Punkte</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Platz">@context.TabellenPlatz</MudTd>
-                    <MudTd DataLabel="Team">
-                        <MudImage Height="20" Width="20" Class="mr-2" Src="@context.LogoUrl" Style="object-fit: contain" />
-                        @context.ShortName
-                    </MudTd>
-                    <MudTd DataLabel="Diff">@context.Differenz</MudTd>
-                    <MudTd DataLabel="Punkte" Class="font-weight-bold">
-                        @context.Punkte
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
-        </MudHidden>
-    </MudPaper>    
+    <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!_teams.Any()" EmptyTitle="Noch keine Tabelle verfügbar">
+        <LoadingContent>
+            @for (var i = 0; i < Count; i++)
+            {
+                <MudSkeleton Height="36px" Class="mb-1" />
+            }
+        </LoadingContent>
+        <ChildContent>
+            <MudSimpleTable Dense="true" Hover="true" Elevation="0" Class="ft-table">
+                <thead>
+                    <tr>
+                        <th style="width: 36px">#</th>
+                        <th>Team</th>
+                        <th class="text-center">Sp</th>
+                        <th class="text-center">Diff</th>
+                        <th class="text-center">Pkt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var team in _teams.Take(Count))
+                    {
+                        <tr class="ft-clickable" @onclick="() => NavigationManager.NavigateTo(TeamUrl(team))">
+                            <td><span class="@($"ft-pos ft-pos-{TablePositions.GetZone(team.TabellenPlatz, _teams.Count)}")">@team.TabellenPlatz</span></td>
+                            <td>
+                                <div class="d-flex align-center gap-2">
+                                    <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="22" />
+                                    <span class="ft-ellipsis">@team.DisplayName</span>
+                                </div>
+                            </td>
+                            <td class="text-center">@team.Spiele</td>
+                            <td class="text-center">@(team.Differenz > 0 ? "+" : "")@team.Differenz</td>
+                            <td class="text-center font-weight-bold">@team.Punkte</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        </ChildContent>
+    </DataState>
+</MudPaper>
+
+@code {
+    [Parameter] public int Count { get; set; } = 6;
+
+    private List<Team> _teams = new();
+
+    protected override async Task LoadDataAsync()
+    {
+        _teams = await TabellenService.GetBundesligaTabelle(Season);
+    }
+
+    private static string TeamUrl(Team team) => $"TeamDetailsPage/{team.Id}";
+}

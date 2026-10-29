@@ -1,0 +1,139 @@
+<MudDialog ContentClass="pa-0" TitleClass="pa-0">
+    <TitleContent>
+        <div class="ft-match-hero">
+            <MudText Typo="Typo.caption" Class="ft-match-hero-meta">
+                @(Game.MatchDay > 0 ? $"{Game.MatchDay}. Spieltag • " : "")@Game.GetFormattedDateTime("dddd, dd.MM.yyyy • HH:mm")
+            </MudText>
+            <div class="ft-match-hero-teams">
+                <a href="@($"TeamDetailsPage/{Game.Team1.Id}")" class="ft-match-hero-team" @onclick="Close">
+                    <TeamLogo Url="@Game.Team1.LogoUrl" Name="@Game.Team1.Name" Size="64" />
+                    <span>@Game.Team1.DisplayName</span>
+                </a>
+                <div class="ft-match-hero-score">
+                    <div class="ft-match-hero-result">@Game.GetScoreDisplay(":")</div>
+                    <MudChip T="string" Size="Size.Small" Color="@Game.GetStatusColor()" Variant="Variant.Filled" Class="@(Game.IsLive ? "ft-pulse" : "")">
+                        @Game.GetGameStatus()
+                    </MudChip>
+                    @if (Game.HalfTimeResult != null)
+                    {
+                        <MudText Typo="Typo.caption" Class="ft-match-hero-meta">
+                            Halbzeit @Game.HalfTimeResult.PointsTeam1:@Game.HalfTimeResult.PointsTeam2
+                        </MudText>
+                    }
+                </div>
+                <a href="@($"TeamDetailsPage/{Game.Team2.Id}")" class="ft-match-hero-team" @onclick="Close">
+                    <TeamLogo Url="@Game.Team2.LogoUrl" Name="@Game.Team2.Name" Size="64" />
+                    <span>@Game.Team2.DisplayName</span>
+                </a>
+            </div>
+        </div>
+    </TitleContent>
+
+    <DialogContent>
+        <div class="pa-5">
+            <MudGrid Spacing="2" Class="mb-3">
+                @if (Game.Location?.Stadium is { Length: > 0 } stadium)
+                {
+                    <MudItem xs="12" sm="6">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Stadium" Size="Size.Small" Class="mud-text-secondary" />
+                            <MudText Typo="Typo.body2">@stadium@(Game.Location.City is { Length: > 0 } city ? $", {city}" : "")</MudText>
+                        </div>
+                    </MudItem>
+                }
+                @if (Game.NumberOfViewers is > 0)
+                {
+                    <MudItem xs="12" sm="6">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" Class="mud-text-secondary" />
+                            <MudText Typo="Typo.body2">@Game.NumberOfViewers.Value.ToString("N0") Zuschauer</MudText>
+                        </div>
+                    </MudItem>
+                }
+                @if (Game.IsUpcoming)
+                {
+                    <MudItem xs="12">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Color="Color.Info" />
+                            <MudText Typo="Typo.body2">Anstoß @Game.GetTimeUntil()</MudText>
+                        </div>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-2">Spielverlauf</MudText>
+            @if (_goals.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    @(Game.HasStarted ? "Keine Tore." : "Das Spiel hat noch nicht begonnen.")
+                </MudText>
+            }
+            else
+            {
+                <div class="ft-goal-timeline">
+                    @foreach (var goal in _goals)
+                    {
+                        var isHome = goal.ScoringTeam.Id == Game.Team1.Id;
+                        <div class="@($"ft-goal-row {(isHome ? "home" : "away")}")">
+                            <div class="ft-goal-side">
+                                @if (isHome)
+                                {
+                                    <GoalLabel Event="goal" OnPlayerClick="OpenPlayer" />
+                                }
+                            </div>
+                            <div class="ft-goal-center">
+                                <span class="ft-goal-minute">@(goal.Goal.MatchMinute?.ToString() ?? "?")'</span>
+                                <span class="ft-goal-score">@goal.Goal.ScoreTeam1:@goal.Goal.ScoreTeam2</span>
+                            </div>
+                            <div class="ft-goal-side">
+                                @if (!isHome)
+                                {
+                                    <GoalLabel Event="goal" OnPlayerClick="OpenPlayer" />
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Schließen</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] NavigationManager NavigationManager { get; set; } = null!;
+
+    [Parameter] public Game Game { get; set; } = new();
+
+    private List<GoalEvent> _goals = new();
+
+    public static DialogOptions Options { get; } = new()
+    {
+        CloseOnEscapeKey = true,
+        CloseButton = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Small
+    };
+
+    public static Task Show(IDialogService dialogService, Game game)
+    {
+        var parameters = new DialogParameters<GameDetailsDialog> { { x => x.Game, game } };
+        return dialogService.ShowAsync<GameDetailsDialog>(null, parameters, Options);
+    }
+
+    protected override void OnParametersSet()
+    {
+        _goals = StatisticsService.GetGoalEvents([Game]);
+    }
+
+    private void OpenPlayer(GoalEvent goal)
+    {
+        Close();
+        NavigationManager.NavigateTo($"spieler/{goal.Goal.GoalGetterId}");
+    }
+
+    private void Close() => MudDialog.Close();
+}

@@ -1,58 +1,120 @@
 @page "/Tabelle"
-@using FootballTracker.Core.Models
-@using FootballTracker.Services
+@inherits SeasonPageBase
 @inject TabellenService TabellenService
-@inject AppStateService AppStateService
+@inject GameService GameService
+@inject NavigationManager NavigationManager
 
-<MudPaper Class="pa-6">
-    <MudText Typo="Typo.h4" Class="mb-4 font-weight-bold" Style="margin-top: 30px">
-        Bundesliga Tabelle
-    </MudText>
+<PageTitle>Tabelle • Bundesliga Tracker</PageTitle>
 
-    <MudTable T="Team" Items="_teams" Dense="true" Hover="true" Bordered="true" Striped="true" OnRowClick="@NavigateToDetailsPage" Breakpoint="Breakpoint.None">
-        <HeaderContent>
-            <MudTh>Platz</MudTh>
-            <MudTh>Team</MudTh>
-            <MudTh>Spiele</MudTh>
-            <MudTh>S</MudTh>
-            <MudTh>U</MudTh>
-            <MudTh>N</MudTh>
-            <MudTh>Tore</MudTh>
-            <MudTh>Diff</MudTh>
-            <MudTh>Punkte</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Platz">@context.TabellenPlatz</MudTd>
-            <MudTd DataLabel="Team">
-                <MudImage Height="40" Width="40" Class="mr-2" Src="@context.LogoUrl" Style="object-fit: contain" />
-                <MudHidden Breakpoint="Breakpoint.MdAndDown">
-                    @context.Name
-                </MudHidden>
-                
-            </MudTd>
-            <MudTd DataLabel="Spiele">@context.Spiele</MudTd>
-            <MudTd DataLabel="Siege">@context.Siege</MudTd>
-            <MudTd DataLabel="Unentschieden">@context.Unentschieden</MudTd>
-            <MudTd DataLabel="Niederlagen">@context.Niederlagen</MudTd>
-            <MudTd DataLabel="Tore">@context.Tore:@context.Gegentore</MudTd>
-            <MudTd DataLabel="Differenz">@context.Differenz</MudTd>
-            <MudTd DataLabel="Punkte" Class="font-weight-bold">
-                @context.Punkte
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
+<PageHeader Title="Tabelle" Subtitle="@($"1. Bundesliga • Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.TableChart">
+    <Actions>
+        <MudToggleGroup T="string" Value="_view" ValueChanged="ChangeView" Color="Color.Primary" Size="Size.Small" Outlined="true" Delimiters="true">
+            <MudToggleItem Value="@("gesamt")" Text="Gesamt" />
+            <MudToggleItem Value="@("heim")" Text="Heim" />
+            <MudToggleItem Value="@("auswaerts")" Text="Auswärts" />
+        </MudToggleGroup>
+    </Actions>
+</PageHeader>
+
+<MudPaper Class="ft-card pa-0 pa-md-2" Elevation="0" Outlined="true">
+    <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!_rows.Any()" EmptyTitle="Noch keine Tabelle verfügbar">
+        <MudTable T="TableRow" Items="_rows" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.None"
+                  OnRowClick="@(args => NavigationManager.NavigateTo($"TeamDetailsPage/{args.Item!.Team.Id}"))"
+                  RowClass="ft-clickable" HorizontalScrollbar="true" Class="ft-table">
+            <HeaderContent>
+                <MudTh Style="width: 48px">#</MudTh>
+                <MudTh>Team</MudTh>
+                <MudTh Class="text-center">Sp</MudTh>
+                <MudTh Class="text-center">S</MudTh>
+                <MudTh Class="text-center">U</MudTh>
+                <MudTh Class="text-center">N</MudTh>
+                <MudTh Class="text-center">Tore</MudTh>
+                <MudTh Class="text-center">Diff</MudTh>
+                <MudTh Class="text-center">Pkt</MudTh>
+                <MudTh Class="d-none d-md-table-cell">Form</MudTh>
+                <MudTh Style="width: 48px"></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd><span class="@($"ft-pos ft-pos-{TablePositions.GetZone(context.Position, _rows.Count)}")">@context.Position</span></MudTd>
+                <MudTd>
+                    <div class="d-flex align-center gap-2">
+                        <TeamLogo Url="@context.Team.LogoUrl" Name="@context.Team.Name" Size="26" />
+                        <MudHidden Breakpoint="Breakpoint.SmAndDown">@context.Team.Name</MudHidden>
+                        <MudHidden Breakpoint="Breakpoint.MdAndUp">@context.Team.DisplayName</MudHidden>
+                    </div>
+                </MudTd>
+                <MudTd Class="text-center">@context.Played</MudTd>
+                <MudTd Class="text-center">@context.Won</MudTd>
+                <MudTd Class="text-center">@context.Draw</MudTd>
+                <MudTd Class="text-center">@context.Lost</MudTd>
+                <MudTd Class="text-center ft-nowrap">@context.GoalsFor:@context.GoalsAgainst</MudTd>
+                <MudTd Class="text-center">@(context.GoalDifference > 0 ? "+" : "")@context.GoalDifference</MudTd>
+                <MudTd Class="text-center font-weight-bold">@context.Points</MudTd>
+                <MudTd Class="d-none d-md-table-cell"><FormChips Form="@context.Form" /></MudTd>
+                <MudTd><FavoriteButton Team="context.Team" Size="Size.Small" /></MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DataState>
 </MudPaper>
 
-@code {
-    private List<Team> _teams = new();
-
-    protected override async Task OnInitializedAsync()
+<div class="d-flex flex-wrap gap-4 mt-3 px-1">
+    @foreach (var (zone, label) in TablePositions.Legend)
     {
-        Console.WriteLine(AppStateService.SelectedSeason.Year);
-        _teams = await TabellenService.GetBundesligaTabelle(AppStateService.SelectedSeason.Year);
+        <div class="d-flex align-center gap-2">
+            <span class="@($"ft-legend ft-pos-{zone}")"></span>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@label</MudText>
+        </div>
+    }
+</div>
+
+@code {
+    private record TableRow(int Position, Team Team, int Played, int Won, int Draw, int Lost, int GoalsFor, int GoalsAgainst, int Points, string Form)
+    {
+        public int GoalDifference => GoalsFor - GoalsAgainst;
+    }
+
+    private string _view = "gesamt";
+    private List<Team> _table = new();
+    private List<Game> _games = new();
+    private List<TableRow> _rows = new();
+
+    protected override async Task LoadDataAsync()
+    {
+        _table = await TabellenService.GetBundesligaTabelle(Season);
+        _games = await GameService.GetSeasonGamesAsync(Season);
+        BuildRows();
+    }
+
+    private void ChangeView(string view)
+    {
+        _view = view;
+        BuildRows();
+    }
+
+    private void BuildRows()
+    {
+        if (_view == "gesamt")
+        {
+            _rows = _table
+                .Select(t => new TableRow(t.TabellenPlatz, t, t.Spiele, t.Siege, t.Unentschieden, t.Niederlagen, t.Tore, t.Gegentore, t.Punkte, t.Form))
+                .ToList();
+            return;
+        }
+
+        var home = _view == "heim";
+        var teamsById = _table.ToDictionary(t => t.Id);
+        _rows = StatisticsService.BuildRecords(_games, (game, team) => game.IsHomeTeam(team.Id) == home)
+            .Select((r, i) =>
+            {
+                var team = teamsById.GetValueOrDefault(r.Team.Id) ?? r.Team;
+                var form = new string(_games
+                    .Where(g => g.MatchIsFinished && g.Involves(team.Id) && g.IsHomeTeam(team.Id) == home)
+                    .OrderBy(g => g.MatchDateTimeUtc)
+                    .TakeLast(5)
+                    .Select(g => g.GetOutcomeFor(team.Id) ?? '-')
+                    .ToArray());
+                return new TableRow(i + 1, team, r.Played, r.Won, r.Draw, r.Lost, r.GoalsFor, r.GoalsAgainst, r.Points, form);
+            })
+            .ToList();
     }
 }
-
-
-
-

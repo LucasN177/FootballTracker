@@ -1,6 +1,274 @@
 @page "/FavSpieler"
-<h3>Spieler</h3>
+@inherits SeasonPageBase
+@inject FavoritesService FavoritesService
+@inject StatisticsService StatisticsService
+@inject GameService GameService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Player Tracker • Bundesliga Tracker</PageTitle>
+
+<PageHeader Title="Player Tracker" Subtitle="@($"Deine Lieblingsspieler in der Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.Star" />
+
+<LoginRequired Title="Verfolge deine Lieblingsspieler" Icon="@Icons.Material.Filled.Star"
+               Text="Melde dich an, um Spieler zu favorisieren. Der Player Tracker zeigt dir anschließend Tore, Elfmeter, Trefferquote und den Saisonverlauf deiner Spieler.">
+    <!-- Spieler hinzufügen -->
+    <MudPaper Class="ft-card pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudAutocomplete T="PlayerSeasonStats"
+                         Value="_playerToAdd"
+                         SearchFunc="SearchPlayers"
+                         ToStringFunc="@(p => p?.Name ?? string.Empty)"
+                         Label="Spieler suchen und zum Tracker hinzufügen"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         AdornmentIcon="@Icons.Material.Filled.PersonSearch"
+                         ResetValueOnEmptyText="true"
+                         CoerceText="false"
+                         MaxItems="15"
+                         Disabled="IsLoading"
+                         ValueChanged="AddPlayer">
+            <ItemTemplate Context="player">
+                <div class="d-flex align-center gap-2 w-100">
+                    <TeamLogo Url="@player.Team?.LogoUrl" Name="@player.Team?.Name" Size="20" />
+                    <span class="flex-grow-1">@player.Name</span>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@player.GoalCount Tore</MudText>
+                    @if (FavoritesService.IsFavoritePlayer(player.PlayerId))
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Color="Color.Warning" Size="Size.Small" />
+                    }
+                </div>
+            </ItemTemplate>
+        </MudAutocomplete>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-1">
+            Hinweis: OpenLigaDB liefert nur Daten zu Torschützen – gesucht werden kann daher nach allen Spielern mit mindestens einem Tor in der gewählten Saison.
+        </MudText>
+    </MudPaper>
+
+    @if (!string.IsNullOrEmpty(FavoritesService.LastError))
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            Favoriten konnten nicht geladen werden: @FavoritesService.LastError
+        </MudAlert>
+    }
+
+    <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!_tracked.Any()"
+               EmptyIcon="@Icons.Material.Outlined.StarBorder" EmptyTitle="Noch keine Spieler im Tracker"
+               EmptyText="Füge über die Suche oder die Torschützenliste Spieler hinzu.">
+        <EmptyContent>
+            <MudButton Href="GoalGetters" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.SportsSoccer" Class="mt-3">Zur Torschützenliste</MudButton>
+        </EmptyContent>
+        <ChildContent>
+            <!-- Übersicht -->
+            <MudGrid Spacing="3" Class="mb-2">
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.Star" Color="Color.Warning" Value="@_tracked.Count.ToString()" Label="Getrackte Spieler" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Success" Value="@_tracked.Sum(t => t.Stats?.GoalCount ?? 0).ToString()" Label="Tore gesamt" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.Whatshot" Color="Color.Primary" Value="@(_bestPlayer?.Stats?.Name ?? "–")" Label="Bester Torschütze" Hint="@(_bestPlayer?.Stats != null ? $"{_bestPlayer.Stats.GoalCount} Tore" : null)" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <StatCard Icon="@Icons.Material.Filled.Bolt" Color="Color.Info" Value="@(_lastScorer?.Stats?.Name ?? "–")" Label="Zuletzt getroffen" Hint="@(_lastScorer?.Stats?.LastGoal is { } g ? g.Game.GetFormattedDateTime("dd.MM.yyyy") : null)" />
+                </MudItem>
+            </MudGrid>
+
+            @if (_chartSeries.Any())
+            {
+                <MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h6">Torverlauf</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Kumulierte Tore pro Spieltag</MudText>
+                    <MudChart ChartType="ChartType.Line" ChartSeries="@_chartSeries" XAxisLabels="@_labels" Width="100%" Height="280px" ChartOptions="@_chartOptions" />
+                </MudPaper>
+            }
+
+            <MudGrid Spacing="3">
+                @foreach (var tracked in _tracked)
+                {
+                    var stats = tracked.Stats;
+                    <MudItem xs="12" sm="6" xl="4">
+                        <MudPaper Class="ft-card ft-hover-lift ft-player-card h-100" Elevation="0" Outlined="true">
+                            <div class="ft-player-card-header">
+                                <MudAvatar Size="Size.Large" Class="ft-player-avatar">@Initials(tracked.Name)</MudAvatar>
+                                <div class="flex-grow-1" style="min-width: 0">
+                                    <MudLink Href="@($"spieler/{tracked.PlayerId}")" Typo="Typo.h6" Color="Color.Inherit" Class="ft-ellipsis d-block">@tracked.Name</MudLink>
+                                    @if (stats?.Team is { } team)
+                                    {
+                                        <div class="d-flex align-center gap-1">
+                                            <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="18" />
+                                            <MudText Typo="Typo.caption" Class="mud-text-secondary ft-ellipsis">@team.Name</MudText>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Kein Tor in dieser Saison</MudText>
+                                    }
+                                </div>
+                                <FavoriteButton PlayerId="tracked.PlayerId" PlayerName="@tracked.Name" />
+                            </div>
+
+                            <div class="ft-player-stats">
+                                <div>
+                                    <span class="ft-player-stat-value">@(stats?.GoalCount ?? 0)</span>
+                                    <span class="ft-player-stat-label">Tore</span>
+                                </div>
+                                <div>
+                                    <span class="ft-player-stat-value">@(stats?.Rank.ToString() ?? "–")</span>
+                                    <span class="ft-player-stat-label">Rang</span>
+                                </div>
+                                <div>
+                                    <span class="ft-player-stat-value">@(stats?.PenaltyCount ?? 0)</span>
+                                    <span class="ft-player-stat-label">Elfmeter</span>
+                                </div>
+                                <div>
+                                    <span class="ft-player-stat-value">@(stats?.GamesWithGoal ?? 0)</span>
+                                    <span class="ft-player-stat-label">Spiele m. Tor</span>
+                                </div>
+                            </div>
+
+                            @if (stats != null && _playedMatchDays > 0)
+                            {
+                                <div class="ft-sparkbars" title="Tore pro Spieltag">
+                                    @foreach (var (goals, index) in stats.GoalsPerMatchDay(_playedMatchDays).Select((g, i) => (g, i)))
+                                    {
+                                        <span class="@(goals > 0 ? "hit" : "")" style="@($"height: {(goals > 0 ? Math.Min(100, 35 + (int)goals * 30) : 8)}%")"
+                                              title="@($"{index + 1}. Spieltag: {goals} Tor(e)")"></span>
+                                    }
+                                </div>
+                            }
+
+                            <div class="ft-player-card-footer">
+                                @if (stats?.LastGoal is { } last)
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary ft-ellipsis">
+                                        Letztes Tor: @last.Goal.MatchMinute' gegen @last.Opponent.DisplayName (@last.Game.GetFormattedDateTime("dd.MM."))
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Noch kein Tor in dieser Saison</MudText>
+                                }
+                                <MudButton Size="Size.Small" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight" Href="@($"spieler/{tracked.PlayerId}")">Details</MudButton>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        </ChildContent>
+    </DataState>
+</LoginRequired>
 
 @code {
-    
+    private record TrackedPlayer(int PlayerId, string Name, PlayerSeasonStats? Stats);
+
+    private List<PlayerSeasonStats> _allPlayers = new();
+    private List<TrackedPlayer> _tracked = new();
+    private TrackedPlayer? _bestPlayer;
+    private TrackedPlayer? _lastScorer;
+    private PlayerSeasonStats? _playerToAdd;
+    private int _playedMatchDays;
+
+    private List<ChartSeries> _chartSeries = new();
+    private string[] _labels = [];
+    private readonly ChartOptions _chartOptions = new()
+    {
+        LineStrokeWidth = 3,
+        InterpolationOption = InterpolationOption.Straight,
+        ChartPalette = ["#d20a11", "#1976d2", "#2e7d32", "#ed8b00", "#7c3aed", "#0891b2", "#be185d", "#4b5563"]
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        FavoritesService.Changed += OnFavoritesChanged;
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task LoadDataAsync()
+    {
+        await FavoritesService.EnsureLoadedAsync();
+        var games = await GameService.GetSeasonGamesAsync(Season);
+        _playedMatchDays = GameService.GetPlayedMatchDays(games);
+        _labels = ChartHelper.MatchDayLabels(_playedMatchDays);
+        _allPlayers = await StatisticsService.GetPlayerStatsAsync(Season);
+        BuildTracked();
+    }
+
+    private void BuildTracked()
+    {
+        var statsById = _allPlayers.ToDictionary(p => p.PlayerId);
+        _tracked = FavoritesService.Players
+            .GroupBy(f => f.PlayerId)
+            .Select(g =>
+            {
+                var stats = statsById.GetValueOrDefault(g.Key);
+                var name = stats?.Name ?? g.First().PlayerName ?? $"Spieler #{g.Key}";
+                return new TrackedPlayer(g.Key, name, stats);
+            })
+            .OrderByDescending(t => t.Stats?.GoalCount ?? -1)
+            .ThenBy(t => t.Name)
+            .ToList();
+
+        _bestPlayer = _tracked.FirstOrDefault(t => t.Stats?.GoalCount > 0);
+        _lastScorer = _tracked
+            .Where(t => t.Stats?.LastGoal != null)
+            .MaxBy(t => t.Stats!.LastGoal!.Game.MatchDateTimeUtc);
+
+        _chartSeries = _tracked
+            .Where(t => t.Stats?.GoalCount > 0)
+            .Take(8)
+            .Select(t => new ChartSeries { Name = t.Name, Data = t.Stats!.CumulativeGoals(_playedMatchDays) })
+            .ToList();
+    }
+
+    private Task<IEnumerable<PlayerSeasonStats>> SearchPlayers(string value, CancellationToken token)
+    {
+        var result = string.IsNullOrWhiteSpace(value)
+            ? _allPlayers.Take(15)
+            : _allPlayers.Where(p => p.Name.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                     || (p.Team?.Name.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false));
+        return Task.FromResult(result);
+    }
+
+    private async Task AddPlayer(PlayerSeasonStats? player)
+    {
+        _playerToAdd = null;
+        if (player == null)
+            return;
+
+        if (FavoritesService.IsFavoritePlayer(player.PlayerId))
+        {
+            Snackbar.Add($"{player.Name} ist bereits im Tracker.", Severity.Info);
+            return;
+        }
+
+        var result = await FavoritesService.TogglePlayerAsync(player.PlayerId, player.Name);
+        if (result.IsSuccess)
+            Snackbar.Add($"{player.Name} wird jetzt getrackt", Severity.Success);
+        else
+            Snackbar.Add(result.ErrorMessage ?? "Spieler konnte nicht hinzugefügt werden.", Severity.Error);
+    }
+
+    private void OnFavoritesChanged() => InvokeAsync(() =>
+    {
+        BuildTracked();
+        StateHasChanged();
+    });
+
+    private static string Initials(string name)
+    {
+        var parts = name.Replace(".", " ").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length switch
+        {
+            0 => "?",
+            1 => parts[0][..1].ToUpperInvariant(),
+            _ => $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+        };
+    }
+
+    public override void Dispose()
+    {
+        FavoritesService.Changed -= OnFavoritesChanged;
+        base.Dispose();
+    }
 }

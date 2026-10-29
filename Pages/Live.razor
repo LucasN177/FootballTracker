@@ -1,0 +1,170 @@
+@page "/live"
+@implements IAsyncDisposable
+@inject GameService GameService
+@inject FavoritesService FavoritesService
+
+<PageTitle>Live Scores • Bundesliga Tracker</PageTitle>
+
+<PageHeader Title="Live Scores" Subtitle="@Subtitle" Icon="@Icons.Material.Filled.LiveTv">
+    <Actions>
+        <MudSwitch T="bool" Value="_autoRefresh" ValueChanged="ToggleAutoRefresh" Color="Color.Primary" Label="Auto-Refresh" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="() => Load(true)" Disabled="_isLoading">
+            Aktualisieren
+        </MudButton>
+    </Actions>
+</PageHeader>
+
+@if (_autoRefresh)
+{
+    <MudProgressLinear Color="Color.Primary" Value="@_refreshProgress" Size="Size.Small" Rounded="true" Class="mb-4" />
+}
+
+<DataState IsLoading="@(_isLoading && !_games.Any())" Error="@_error" OnRetry="() => Load(true)" IsEmpty="!_games.Any()" EmptyTitle="Keine Spiele gefunden">
+    @if (_live.Any())
+    {
+        <div class="d-flex align-center gap-2 mb-3">
+            <span class="ft-live-dot"></span>
+            <MudText Typo="Typo.h6">Jetzt live</MudText>
+        </div>
+        <MudGrid Spacing="3" Class="mb-6">
+            @foreach (var game in _live)
+            {
+                <MudItem xs="12" md="6" xl="4">
+                    <GameDetailCard Game="game" IsFavorite="IsFavoriteGame(game)" />
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-5" Icon="@Icons.Material.Filled.Bedtime">
+            Gerade läuft kein Spiel.
+            @if (_upcoming.FirstOrDefault() is { } next)
+            {
+                <span>Nächster Anstoß: <strong>@next.Team1.DisplayName – @next.Team2.DisplayName</strong> am @next.GetFormattedDateTime("dddd, dd.MM. 'um' HH:mm") Uhr (@next.GetTimeUntil()).</span>
+            }
+        </MudAlert>
+    }
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" lg="6">
+            <MudPaper Class="ft-card pa-4 pa-md-5" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h6" Class="mb-1">Anstehend</MudText>
+                <GamesList Games="_upcoming" HighlightTeamIds="_favoriteTeamIds" EmptyText="Alle Spiele dieses Spieltags sind beendet" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" lg="6">
+            <MudPaper Class="ft-card pa-4 pa-md-5" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h6" Class="mb-1">Ergebnisse</MudText>
+                <GamesList Games="_finished" HighlightTeamIds="_favoriteTeamIds" EmptyText="Noch keine Ergebnisse" />
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</DataState>
+
+<MudText Typo="Typo.caption" Align="Align.Center" Class="mud-text-secondary d-block mt-6">
+    Daten von OpenLigaDB • Stand @(GameService.LastUpdate?.ToString("HH:mm:ss") ?? "–")
+</MudText>
+
+@code {
+    private const int RefreshSeconds = 60;
+
+    private List<Game> _games = new();
+    private List<Game> _live = new();
+    private List<Game> _upcoming = new();
+    private List<Game> _finished = new();
+    private int[] _favoriteTeamIds = [];
+    private bool _isLoading = true;
+    private string? _error;
+    private bool _autoRefresh = true;
+    private double _refreshProgress;
+    private int _matchDay;
+
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _cts;
+
+    private string Subtitle => _matchDay > 0
+        ? $"{_matchDay}. Spieltag • Saison {Season.FromYear(AppStateService.CurrentSeasonYear).Name}"
+        : "Aktueller Spieltag";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FavoritesService.EnsureLoadedAsync();
+        _favoriteTeamIds = FavoritesService.Teams.Select(t => t.TeamId).ToArray();
+        await Load(false);
+        StartTimer();
+    }
+
+    private async Task Load(bool forceRefresh)
+    {
+        _isLoading = true;
+        _error = null;
+        try
+        {
+            _matchDay = await GameService.GetCurrentMatchDay(AppStateService.CurrentSeasonYear);
+            _games = await GameService.GetLiveAndTodayGamesAsync(forceRefresh);
+            _live = _games.Where(g => g.IsLive).ToList();
+            _upcoming = _games.Where(g => !g.MatchIsFinished && !g.IsLive).ToList();
+            _finished = _games.Where(g => g.MatchIsFinished).OrderByDescending(g => g.MatchDateTimeUtc).ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+            _refreshProgress = 0;
+        }
+    }
+
+    private void StartTimer()
+    {
+        _cts = new CancellationTokenSource();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        _ = RunTimer(_cts.Token);
+    }
+
+    private async Task RunTimer(CancellationToken token)
+    {
+        var elapsed = 0;
+        try
+        {
+            while (_timer != null && await _timer.WaitForNextTickAsync(token))
+            {
+                if (!_autoRefresh)
+                    continue;
+
+                elapsed++;
+                _refreshProgress = 100.0 * elapsed / RefreshSeconds;
+                if (elapsed >= RefreshSeconds)
+                {
+                    elapsed = 0;
+                    await InvokeAsync(() => Load(true));
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Seite wurde verlassen
+        }
+    }
+
+    private void ToggleAutoRefresh(bool value)
+    {
+        _autoRefresh = value;
+        _refreshProgress = 0;
+    }
+
+    private bool IsFavoriteGame(Game game) => _favoriteTeamIds.Contains(game.Team1.Id) || _favoriteTeamIds.Contains(game.Team2.Id);
+
+    public ValueTask DisposeAsync()
+    {
+        _cts?.Cancel();
+        _timer?.Dispose();
+        _timer = null;
+        _cts?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

@@ -1,0 +1,19 @@
+@if (string.IsNullOrEmpty(Url))
+{
+    <MudAvatar Size="MudBlazor.Size.Small" Color="Color.Default" Style="@($"width:{Size}px;height:{Size}px;font-size:{Size * 2 / 5}px")">
+        @Initials
+    </MudAvatar>
+}
+else
+{
+    <img src="@Url" alt="@Name" title="@Name" class="@($"ft-team-logo {Class}")" style="@($"width:{Size}px;height:{Size}px")" loading="lazy" />
+}
+
+@code {
+    [Parameter] public string? Url { get; set; }
+    [Parameter] public string? Name { get; set; }
+    [Parameter] public int Size { get; set; } = 28;
+    [Parameter] public string? Class { get; set; }
+
+    private string Initials => string.IsNullOrWhiteSpace(Name) ? "?" : Name.Trim()[..Math.Min(2, Name.Trim().Length)].ToUpperInvariant();
+}

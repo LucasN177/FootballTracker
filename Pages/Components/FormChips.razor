@@ -1,0 +1,34 @@
+<span class="ft-form">
+    @if (string.IsNullOrEmpty(Form))
+    {
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">–</MudText>
+    }
+    else
+    {
+        @foreach (var outcome in Form)
+        {
+            <span class="@($"ft-form-chip ft-form-{OutcomeClass(outcome)}")" title="@OutcomeTitle(outcome)">@outcome</span>
+        }
+    }
+</span>
+
+@code {
+    /// <summary>Form als Zeichenkette, älteste Begegnung zuerst ('S', 'U', 'N').</summary>
+    [Parameter] public string? Form { get; set; }
+
+    private static string OutcomeClass(char outcome) => outcome switch
+    {
+        'S' => "win",
+        'U' => "draw",
+        'N' => "loss",
+        _ => "none"
+    };
+
+    private static string OutcomeTitle(char outcome) => outcome switch
+    {
+        'S' => "Sieg",
+        'U' => "Unentschieden",
+        'N' => "Niederlage",
+        _ => "Keine Daten"
+    };
+}

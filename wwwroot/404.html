@@ -1,43 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FootballTracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Bundesliga Tracker – Tabelle, Spieltage, Live Scores, Statistiken und Player Tracker für die 1. Fußball-Bundesliga." />
+    <meta name="theme-color" content="#d20a11" />
+    <title>Bundesliga Tracker</title>
     <base href="/" />
-    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="css/app.css" />
-    <link rel="icon" type="image/png" href="Resources/img/Bundesliga-Logo.jpeg" />
-    <link href="FootballTracker.styles.css" rel="stylesheet" />
-    <link href="manifest.webmanifest" rel="manifest" />
-    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <!-- Important: Increment the version parameter whenever you update MudBlazor to prevent caching issues -->
-    <link href="_content/MudBlazor/MudBlazor.min.css?v=1" rel="stylesheet" />
-
+    <link href="_content/MudBlazor/MudBlazor.min.css?v=2" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="Resources/img/Icon.png" />
+    <link href="manifest.webmanifest" rel="manifest" />
+    <link rel="apple-touch-icon" sizes="512x512" href="Resources/img/Icon.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="Resources/img/Icon.png" />
 </head>
 
 <body>
-    <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+<div id="app">
+    <div class="app-loader">
+        <img src="Resources/img/Icon.png" class="loader-logo" alt="Bundesliga Tracker" />
+
+        <div class="loader-bar-container">
+            <div class="loader-bar"></div>
+        </div>
+
+        <div class="loader-text">Bundesliga Tracker wird geladen...</div>
     </div>
+</div>
 
     <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="." class="reload">Reload</a>
+        Es ist ein unerwarteter Fehler aufgetreten.
+        <a href="." class="reload">Neu laden</a>
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
     <!-- Important: Increment the version parameter whenever you update MudBlazor to prevent caching issues -->
-    <script src="_content/MudBlazor/MudBlazor.min.js?v=1"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js?v=2"></script>
 
-    <script>navigator.serviceWorker.register('service-worker.js');</script>
+    <script>
+        window.ftScrollIntoView = id => document.getElementById(id)?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+        navigator.serviceWorker.register("service-worker.js");
+    </script>
 </body>
 
 </html>
