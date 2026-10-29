@@ -4,8 +4,6 @@ namespace FootballTracker.Pages.Shared;
 
 public static class ChartHelper
 {
-    /// <summary>Farben für mehrere Datenreihen (Teams, Spieler) in Diagrammen.</summary>
-    public static readonly string[] SeriesColors = ["#d20a11", "#1976d2", "#2e7d32", "#ed8b00", "#7c3aed", "#0891b2", "#be185d", "#4b5563"];
 
     /// <summary>Achsenbeschriftung je Spieltag bzw. Pokalrunde.</summary>
     public static string[] RoundLabels(Competition competition, int count) => competition.IsCup

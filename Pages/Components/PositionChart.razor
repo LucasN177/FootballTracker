@@ -40,7 +40,7 @@ else
 
         @foreach (var (series, index) in Series.Select((s, i) => (s, i)))
         {
-            var color = series.Color ?? ChartHelper.SeriesColors[index % ChartHelper.SeriesColors.Length];
+            var color = series.Color ?? Competition.ChartColors[index % Competition.ChartColors.Length];
             var points = series.Positions.Take(MatchDays).Select((p, i) => (Day: i + 1, Position: p)).Where(p => p.Position > 0).ToList();
             if (points.Count == 0)
             {

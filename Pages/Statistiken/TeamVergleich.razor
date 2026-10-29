@@ -142,10 +142,11 @@
     private bool _h2hLoading;
     private int _h2hWins1, _h2hWins2, _h2hDraws;
 
-    private readonly ChartOptions _lineOptions = new() { ChartPalette = ["#d20a11", "#1976d2"], LineStrokeWidth = 3, InterpolationOption = InterpolationOption.Straight };
+    private readonly ChartOptions _lineOptions = new() { LineStrokeWidth = 3, InterpolationOption = InterpolationOption.Straight };
 
     protected override async Task LoadDataAsync()
     {
+        _lineOptions.ChartPalette = AppStateService.SelectedCompetition.ChartColors;
         _games = await GameService.GetSeasonGamesAsync(Season);
         _table = await TabellenService.GetTabelle(Season);
         // Bei Saisonwechsel die bisherige Auswahl beibehalten, sofern beide Teams noch in der Liga sind

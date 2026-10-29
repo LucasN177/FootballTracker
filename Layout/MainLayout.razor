@@ -8,7 +8,17 @@
 @inject ISnackbar Snackbar
 @inject IBrowserViewportService BrowserViewportService
 
-<MudThemeProvider Theme="@AppTheme.Theme" IsDarkMode="@AppStateService.IsDarkMode"/>
+<MudThemeProvider Theme="@AppTheme.For(AppStateService.SelectedCompetition)" IsDarkMode="@AppStateService.IsDarkMode"/>
+
+@* Markenfarben des gewählten Wettbewerbs für die eigenen Styles (app.css) *@
+<style>
+    :root {
+        --ft-primary: @(AppStateService.SelectedCompetition.PrimaryColor);
+        --ft-primary-dark: @(AppStateService.SelectedCompetition.PrimaryDarkColor);
+        --ft-primary-light: @(AppStateService.SelectedCompetition.PrimaryLightColor);
+        --ft-compare-second: @(AppStateService.SelectedCompetition.ChartColors[1]);
+    }
+</style>
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -21,7 +31,13 @@
                        OnClick="@AppStateService.DrawerToggle" />
 
         <a href="" class="d-flex align-center gap-3 ft-brand">
-            <MudImage Src="Resources/img/Bundesliga-Logo.jpeg" Alt="Bundesliga" Height="38" Class="ft-brand-logo" ObjectFit="ObjectFit.Contain" />
+            <span class="@($"ft-brand-logo {(AppStateService.SelectedCompetition.LogoIsWordmark ? "wordmark" : "")}")" title="@AppStateService.SelectedCompetition.Name">
+                <img src="@AppStateService.SelectedCompetition.LogoUrl" alt="@AppStateService.SelectedCompetition.ShortName" />
+                @if (AppStateService.SelectedCompetition.LogoIsWordmark)
+                {
+                    <span class="ft-brand-logo-short">2.</span>
+                }
+            </span>
             <MudHidden Breakpoint="Breakpoint.Xs">
                 <div class="d-flex flex-column">
                     <span class="ft-brand-title">Bundesliga Tracker</span>

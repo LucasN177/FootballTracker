@@ -241,7 +241,6 @@
     private string[] _matchDayLabels = [];
     private readonly ChartOptions _lineOptions = new()
     {
-        ChartPalette = ["#d20a11", "#9ca3af"],
         LineStrokeWidth = 3,
         InterpolationOption = InterpolationOption.Straight,
         YAxisTicks = 10
@@ -271,6 +270,7 @@
 
     protected override async Task LoadDataAsync()
     {
+        _lineOptions.ChartPalette = [AppStateService.SelectedCompetition.PrimaryColor, "#9ca3af"];
         _loadedTeamId = TeamId;
         _team = await TeamService.GetTeamAsync(Season, TeamId);
         if (_team == null)

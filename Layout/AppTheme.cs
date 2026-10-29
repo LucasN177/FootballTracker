@@ -1,14 +1,28 @@
+using FootballTracker.Core.Models;
 using MudBlazor;
 
 namespace FootballTracker.Layout;
 
+/// <summary>MudBlazor-Theme je Wettbewerb – die Markenfarbe wechselt mit dem gewählten Wettbewerb.</summary>
 public static class AppTheme
 {
-    public static MudTheme Theme { get; } = new()
+    private static readonly Dictionary<string, MudTheme> Themes = new();
+
+    public static MudTheme For(Competition competition)
+    {
+        if (!Themes.TryGetValue(competition.Shortcut, out var theme))
+        {
+            theme = Create(competition);
+            Themes[competition.Shortcut] = theme;
+        }
+        return theme;
+    }
+
+    private static MudTheme Create(Competition competition) => new()
     {
         PaletteLight = new PaletteLight
         {
-            Primary = "#d20a11",
+            Primary = competition.PrimaryColor,
             Secondary = "#1f2937",
             Tertiary = "#7c3aed",
             Info = "#1976d2",
@@ -16,7 +30,7 @@ public static class AppTheme
             Warning = "#ed8b00",
             Error = "#d32f2f",
             Dark = "#111827",
-            AppbarBackground = "#d20a11",
+            AppbarBackground = competition.PrimaryColor,
             AppbarText = "#ffffff",
             Background = "#f4f5f7",
             Surface = "#ffffff",
@@ -31,7 +45,7 @@ public static class AppTheme
         },
         PaletteDark = new PaletteDark
         {
-            Primary = "#ff4d4f",
+            Primary = competition.PrimaryLightColor,
             Secondary = "#e5e7eb",
             Tertiary = "#a78bfa",
             Info = "#4dabf5",

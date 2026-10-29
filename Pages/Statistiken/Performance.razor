@@ -105,11 +105,11 @@
     {
         LineStrokeWidth = 3,
         InterpolationOption = InterpolationOption.Straight,
-        ChartPalette = ["#d20a11", "#1976d2", "#2e7d32", "#ed8b00", "#7c3aed", "#0891b2"]
     };
 
     protected override async Task LoadDataAsync()
     {
+        _lineOptions.ChartPalette = AppStateService.SelectedCompetition.ChartColors;
         _games = await GameService.GetSeasonGamesAsync(Season);
         _table = await TabellenService.GetTabelle(Season);
         _playedMatchDays = GameService.GetPlayedMatchDays(_games);

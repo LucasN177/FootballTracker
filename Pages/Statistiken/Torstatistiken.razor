@@ -124,12 +124,13 @@
     private List<Game> _biggestWins = new();
     private List<(string Label, TeamRecord Record, string Value)> _teamHighlights = new();
 
-    private readonly ChartOptions _barOptions = new() { ChartPalette = ["#d20a11"], YAxisTicks = 10 };
+    private readonly ChartOptions _barOptions = new() { YAxisTicks = 10 };
     private readonly ChartOptions _minuteOptions = new() { ChartPalette = ["#1976d2"], YAxisTicks = 10 };
     private readonly ChartOptions _donutOptions = new() { ChartPalette = ["#2e7d32", "#f9a825", "#1976d2"] };
 
     protected override async Task LoadDataAsync()
     {
+        _barOptions.ChartPalette = [AppStateService.SelectedCompetition.PrimaryColor];
         var games = await GameService.GetSeasonGamesAsync(Season);
         _finished = games.Where(g => g.MatchIsFinished && g.FinalResult != null).ToList();
         var events = StatisticsService.GetGoalEvents(_finished);
