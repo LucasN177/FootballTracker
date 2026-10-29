@@ -5,28 +5,33 @@ using FootballTracker.Core.Models.Extensions;
 
 namespace FootballTracker.Services;
 
-public class GameService(IOpenLigaDataRepository openLigaDataRepository)
+/// <summary>Spieldaten des im <see cref="AppStateService"/> gewählten Wettbewerbs.</summary>
+public class GameService(IOpenLigaDataRepository openLigaDataRepository, AppStateService appStateService)
 {
-    public const int MatchDaysPerSeason = 34;
-
     /// <summary>Wie lange Daten der laufenden Saison zwischengespeichert werden. Abgeschlossene Saisons werden dauerhaft gecacht.</summary>
     private static readonly TimeSpan CurrentSeasonCacheDuration = TimeSpan.FromMinutes(2);
 
-    private readonly Dictionary<int, (DateTime LoadedAt, List<Game> Games)> _seasonCache = new();
-    private (DateTime LoadedAt, int MatchDay)? _currentMatchDay;
+    private readonly Dictionary<(string League, int Season), (DateTime LoadedAt, List<Game> Games)> _seasonCache = new();
+    private readonly Dictionary<string, (DateTime LoadedAt, int MatchDay)> _currentMatchDay = new();
 
     public DateTime? LastUpdate { get; private set; }
 
     /// <summary>Wird bei jeder Datenänderung erhöht, damit abgeleitete Statistiken ihren Cache invalidieren können.</summary>
     public int Version { get; private set; }
 
+    /// <summary>Anzahl der Spieltage bzw. Runden des gewählten Wettbewerbs.</summary>
+    public int MatchDaysPerSeason => appStateService.SelectedCompetition.RoundCount;
+
+    private string League => appStateService.League;
+
     public async Task<List<Game>> GetSeasonGamesAsync(int season, bool forceRefresh = false)
     {
-        if (!forceRefresh && _seasonCache.TryGetValue(season, out var cached) && !IsExpired(season, cached.LoadedAt))
+        var key = (League, season);
+        if (!forceRefresh && _seasonCache.TryGetValue(key, out var cached) && !IsExpired(season, cached.LoadedAt))
             return cached.Games;
 
-        var games = Unwrap(await openLigaDataRepository.GetMatchData(AppStateService.LeagueShortcut, season));
-        _seasonCache[season] = (DateTime.Now, games);
+        var games = Unwrap(await openLigaDataRepository.GetMatchData(key.League, season));
+        _seasonCache[key] = (DateTime.Now, games);
         LastUpdate = DateTime.Now;
         Version++;
         return games;
@@ -37,8 +42,8 @@ public class GameService(IOpenLigaDataRepository openLigaDataRepository)
         if (forceRefresh)
         {
             // Nur den Spieltag frisch laden (deutlich kleinere Antwort als die ganze Saison).
-            var fresh = Unwrap(await openLigaDataRepository.GetMatchDay(AppStateService.LeagueShortcut, season, matchDay));
-            if (_seasonCache.TryGetValue(season, out var cached))
+            var fresh = Unwrap(await openLigaDataRepository.GetMatchDay(League, season, matchDay));
+            if (_seasonCache.TryGetValue((League, season), out var cached))
             {
                 cached.Games.RemoveAll(g => g.MatchDay == matchDay);
                 cached.Games.AddRange(fresh);
@@ -58,13 +63,13 @@ public class GameService(IOpenLigaDataRepository openLigaDataRepository)
         if (season != AppStateService.CurrentSeasonYear)
             return MatchDaysPerSeason;
 
-        if (_currentMatchDay is { } cached && DateTime.Now - cached.LoadedAt < CurrentSeasonCacheDuration)
+        if (_currentMatchDay.TryGetValue(League, out var cached) && DateTime.Now - cached.LoadedAt < CurrentSeasonCacheDuration)
             return cached.MatchDay;
 
-        var result = await openLigaDataRepository.GetCurrentGroup(AppStateService.LeagueShortcut);
-        var matchDay = result is { IsSuccess: true, Data: not null } ? result.Data.GroupOrderId : 1;
-        _currentMatchDay = (DateTime.Now, Math.Clamp(matchDay, 1, MatchDaysPerSeason));
-        return _currentMatchDay.Value.MatchDay;
+        var result = await openLigaDataRepository.GetCurrentGroup(League);
+        var matchDay = Math.Clamp(result is { IsSuccess: true, Data: not null } ? result.Data.GroupOrderId : 1, 1, MatchDaysPerSeason);
+        _currentMatchDay[League] = (DateTime.Now, matchDay);
+        return matchDay;
     }
 
     /// <summary>Anzahl Spieltage, an denen mindestens ein Spiel beendet wurde.</summary>

@@ -3,8 +3,10 @@
    ========================================================================== */
 
 :root {
-    --ft-red: #d20a11;
-    --ft-red-dark: #8c070b;
+    /* Standardwerte – werden vom MainLayout je Wettbewerb überschrieben */
+    --ft-primary: #d20a11;
+    --ft-primary-dark: #8c070b;
+    --ft-primary-light: #ff5252;
     --ft-win: #2e7d32;
     --ft-draw: #f9a825;
     --ft-loss: #d32f2f;
@@ -29,7 +31,7 @@ h1:focus {
    -------------------------------------------------------------------------- */
 
 .ft-appbar {
-    background: linear-gradient(90deg, var(--ft-red) 0%, #e53935 60%, #ff5252 100%) !important;
+    background: linear-gradient(90deg, var(--ft-primary-dark) 0%, var(--ft-primary) 55%, var(--ft-primary-light) 100%) !important;
 }
 
 .ft-appbar.ft-appbar-dark {
@@ -44,9 +46,51 @@ h1:focus {
 }
 
 .ft-brand-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    min-width: 38px;
+    padding: 2px;
     border-radius: 8px;
     background: white;
-    padding: 2px;
+    flex-shrink: 0;
+}
+
+.ft-brand-logo img {
+    height: 34px;
+    width: auto;
+    display: block;
+}
+
+.ft-brand-logo.wordmark {
+    padding: 0 10px;
+}
+
+.ft-brand-logo.wordmark img {
+    height: 13px;
+}
+
+.ft-brand-logo-short {
+    display: none;
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: var(--ft-primary);
+}
+
+@media (max-width: 600px) {
+    /* Auf dem Smartphone ist die Wortmarke zu breit – stattdessen ein kompaktes Badge */
+    .ft-brand-logo.wordmark {
+        padding: 0;
+    }
+
+    .ft-brand-logo.wordmark img {
+        display: none;
+    }
+
+    .ft-brand-logo.wordmark .ft-brand-logo-short {
+        display: inline;
+    }
 }
 
 .ft-brand-title {
@@ -68,7 +112,7 @@ h1:focus {
 
 .ft-account-avatar {
     background: rgba(255, 255, 255, 0.95) !important;
-    color: var(--ft-red) !important;
+    color: var(--ft-primary) !important;
     font-weight: 700;
     cursor: pointer;
 }
@@ -168,9 +212,9 @@ h1:focus {
 }
 
 .ft-page-header-icon {
-    background: linear-gradient(135deg, var(--ft-red) 0%, var(--ft-red-dark) 100%) !important;
+    background: linear-gradient(135deg, var(--ft-primary) 0%, var(--ft-primary-dark) 100%) !important;
     color: white !important;
-    box-shadow: 0 6px 16px rgba(210, 10, 17, 0.35);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--ft-primary) 35%, transparent);
 }
 
 .ft-page-title {
@@ -201,8 +245,8 @@ h1:focus {
     padding: 32px;
     color: white;
     background: radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.16) 0%, transparent 40%),
-                linear-gradient(135deg, var(--ft-red) 0%, var(--ft-red-dark) 70%, #3b0306 100%);
-    box-shadow: 0 16px 40px rgba(210, 10, 17, 0.25);
+                linear-gradient(135deg, var(--ft-primary) 0%, var(--ft-primary-dark) 70%, #3b0306 100%);
+    box-shadow: 0 16px 40px color-mix(in srgb, var(--ft-primary) 25%, transparent);
 }
 
 .ft-hero-content {
@@ -227,7 +271,7 @@ h1:focus {
 
 .ft-hero-button {
     background: white !important;
-    color: var(--ft-red) !important;
+    color: var(--ft-primary) !important;
 }
 
 .ft-hero-ball {
@@ -258,7 +302,7 @@ h1:focus {
     font-size: 2.2rem !important;
     font-weight: 800;
     background: rgba(255, 255, 255, 0.95) !important;
-    color: var(--ft-red) !important;
+    color: var(--ft-primary) !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -353,8 +397,8 @@ h1:focus {
 }
 
 .ft-game-row-highlight {
-    background: rgba(210, 10, 17, 0.06);
-    box-shadow: inset 3px 0 0 var(--ft-red);
+    background: color-mix(in srgb, var(--ft-primary) 7%, transparent);
+    box-shadow: inset 3px 0 0 var(--ft-primary);
 }
 
 .ft-game-row-team {
@@ -397,7 +441,7 @@ h1:focus {
 }
 
 .ft-score-badge.live {
-    background: var(--ft-red);
+    background: var(--ft-primary);
 }
 
 .ft-live-dot {
@@ -444,17 +488,17 @@ h1:focus {
 }
 
 .ft-matchday:hover {
-    border-color: var(--ft-red);
+    border-color: var(--ft-primary);
 }
 
 .ft-matchday.current {
-    border-color: var(--ft-red);
-    color: var(--ft-red);
+    border-color: var(--ft-primary);
+    color: var(--ft-primary);
 }
 
 .ft-matchday.selected {
-    background: var(--ft-red);
-    border-color: var(--ft-red);
+    background: var(--ft-primary);
+    border-color: var(--ft-primary);
     color: white;
 }
 
@@ -490,7 +534,7 @@ h1:focus {
 .ft-match-hero {
     padding: 24px 20px 20px;
     color: white;
-    background: linear-gradient(135deg, var(--ft-red) 0%, var(--ft-red-dark) 100%);
+    background: linear-gradient(135deg, var(--ft-primary) 0%, var(--ft-primary-dark) 100%);
 }
 
 .ft-match-hero-meta {
@@ -583,7 +627,7 @@ h1:focus {
 .ft-goal-score {
     font-weight: 800;
     background: var(--mud-palette-surface);
-    border: 2px solid var(--ft-red);
+    border: 2px solid var(--ft-primary);
     border-radius: 999px;
     padding: 1px 10px;
     font-size: 0.85rem;
@@ -631,7 +675,7 @@ h1:focus {
     position: relative;
     overflow: hidden;
     border-radius: 20px;
-    background: linear-gradient(135deg, #111827 0%, #1f2937 60%, var(--ft-red-dark) 140%);
+    background: linear-gradient(135deg, #111827 0%, #1f2937 60%, var(--ft-primary-dark) 140%);
     color: white;
     box-shadow: 0 16px 40px rgba(15, 23, 42, 0.25);
 }
@@ -717,8 +761,8 @@ h1:focus {
     justify-content: flex-end;
 }
 
-.ft-compare-bar.left span { background: #d20a11; }
-.ft-compare-bar.right span { background: #1976d2; }
+.ft-compare-bar.left span { background: var(--ft-primary); }
+.ft-compare-bar.right span { background: var(--ft-compare-second, #1976d2); }
 
 .ft-compare-bar span {
     display: block;
@@ -771,7 +815,7 @@ h1:focus {
 }
 
 .ft-player-avatar {
-    background: linear-gradient(135deg, var(--ft-red) 0%, var(--ft-red-dark) 100%) !important;
+    background: linear-gradient(135deg, var(--ft-primary) 0%, var(--ft-primary-dark) 100%) !important;
     color: white !important;
     font-weight: 800;
 }
@@ -813,7 +857,7 @@ h1:focus {
 }
 
 .ft-sparkbars span.hit {
-    background: var(--ft-red);
+    background: var(--ft-primary);
 }
 
 .ft-player-card-footer {
@@ -829,7 +873,7 @@ h1:focus {
 /* Profil */
 .ft-profile-banner {
     height: 96px;
-    background: linear-gradient(135deg, var(--ft-red) 0%, var(--ft-red-dark) 100%);
+    background: linear-gradient(135deg, var(--ft-primary) 0%, var(--ft-primary-dark) 100%);
 }
 
 .ft-profile-avatar {
@@ -839,7 +883,7 @@ h1:focus {
     font-size: 2.4rem !important;
     font-weight: 800;
     background: var(--mud-palette-surface) !important;
-    color: var(--ft-red) !important;
+    color: var(--ft-primary) !important;
     border: 4px solid var(--mud-palette-surface);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
@@ -1019,3 +1063,30 @@ h1:focus {
 .ft-zone-ecl { fill: var(--ft-ecl); }
 .ft-zone-rel { fill: var(--ft-rel); opacity: 0.2; }
 .ft-zone-down { fill: var(--ft-down); }
+
+/* Zonen 2. Bundesliga */
+.ft-pos-up { background: var(--ft-ecl); color: white; }
+.ft-pos-relup { background: #66bb6a; color: white; }
+.ft-zone-up { fill: var(--ft-ecl); }
+.ft-zone-relup { fill: #66bb6a; }
+
+/* Pokal */
+.ft-cup-round-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 4px 16px;
+}
+
+.ft-cup-game {
+    min-width: 0;
+}
+
+.ft-competition-button {
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+}
+
+.ft-matchday {
+    padding: 0 8px;
+    white-space: nowrap;
+}

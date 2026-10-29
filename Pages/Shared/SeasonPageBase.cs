@@ -5,7 +5,7 @@ namespace FootballTracker.Pages.Shared;
 
 /// <summary>
 /// Basis für Seiten, deren Daten von der gewählten Saison abhängen.
-/// Lädt die Daten beim Start und erneut, sobald im Header eine andere Saison gewählt wird.
+/// Lädt die Daten beim Start und erneut, sobald im Header eine andere Saison oder ein anderer Wettbewerb gewählt wird.
 /// </summary>
 public abstract class SeasonPageBase : ComponentBase, IDisposable
 {
@@ -17,7 +17,7 @@ public abstract class SeasonPageBase : ComponentBase, IDisposable
 
     protected override async Task OnInitializedAsync()
     {
-        AppStateService.SeasonChanged += OnSeasonChanged;
+        AppStateService.SelectionChanged += OnSelectionChanged;
         await ReloadAsync();
     }
 
@@ -47,11 +47,11 @@ public abstract class SeasonPageBase : ComponentBase, IDisposable
         }
     }
 
-    private void OnSeasonChanged() => _ = InvokeAsync(ReloadAsync);
+    private void OnSelectionChanged() => _ = InvokeAsync(ReloadAsync);
 
     public virtual void Dispose()
     {
-        AppStateService.SeasonChanged -= OnSeasonChanged;
+        AppStateService.SelectionChanged -= OnSelectionChanged;
         GC.SuppressFinalize(this);
     }
 }

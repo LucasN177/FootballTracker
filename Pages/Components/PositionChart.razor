@@ -12,7 +12,7 @@ else
         {
             @for (var position = 1; position <= TeamCount; position++)
             {
-                var zone = TablePositions.GetZone(position, TeamCount);
+                var zone = TablePositions.GetZone(Competition, position, TeamCount);
                 if (zone != "none")
                 {
                     <rect x="@Num(PadLeft)" y="@Num(Y(position) - RowHeight / 2)" width="@Num(PlotWidth)" height="@Num(RowHeight)" class="@($"ft-zone ft-zone-{zone}")" />
@@ -40,7 +40,7 @@ else
 
         @foreach (var (series, index) in Series.Select((s, i) => (s, i)))
         {
-            var color = series.Color ?? ChartHelper.SeriesColors[index % ChartHelper.SeriesColors.Length];
+            var color = series.Color ?? Competition.ChartColors[index % Competition.ChartColors.Length];
             var points = series.Positions.Take(MatchDays).Select((p, i) => (Day: i + 1, Position: p)).Where(p => p.Position > 0).ToList();
             if (points.Count == 0)
             {
@@ -78,6 +78,7 @@ else
     [Parameter] public int MatchDays { get; set; }
     [Parameter] public int TeamCount { get; set; } = 18;
     [Parameter] public bool ShowZones { get; set; } = true;
+    [Parameter] public Competition Competition { get; set; } = Competition.Bundesliga;
     [Parameter] public double Height { get; set; } = 380;
     [Parameter] public string EmptyText { get; set; } = "Noch keine Spiele absolviert.";
 

@@ -2,6 +2,7 @@
 @implements IAsyncDisposable
 @inject GameService GameService
 @inject FavoritesService FavoritesService
+@inject AppStateService AppStateService
 
 <PageTitle>Live Scores • Bundesliga Tracker</PageTitle>
 
@@ -84,11 +85,13 @@
     private CancellationTokenSource? _cts;
 
     private string Subtitle => _matchDay > 0
-        ? $"{_matchDay}. Spieltag • Saison {Season.FromYear(AppStateService.CurrentSeasonYear).Name}"
-        : "Aktueller Spieltag";
+        ? $"{AppStateService.SelectedCompetition.Name} • {AppStateService.SelectedCompetition.RoundName(_matchDay)} • Saison {Season.FromYear(AppStateService.CurrentSeasonYear).Name}"
+        : AppStateService.SelectedCompetition.Name;
 
     protected override async Task OnInitializedAsync()
     {
+        // Live Scores zeigen immer die laufende Saison – neu laden, wenn der Wettbewerb wechselt
+        AppStateService.SelectionChanged += OnSelectionChanged;
         await FavoritesService.EnsureLoadedAsync();
         _favoriteTeamIds = FavoritesService.Teams.Select(t => t.TeamId).ToArray();
         await Load(false);
@@ -159,8 +162,15 @@
 
     private bool IsFavoriteGame(Game game) => _favoriteTeamIds.Contains(game.Team1.Id) || _favoriteTeamIds.Contains(game.Team2.Id);
 
+    private void OnSelectionChanged() => _ = InvokeAsync(async () =>
+    {
+        await Load(false);
+        StateHasChanged();
+    });
+
     public ValueTask DisposeAsync()
     {
+        AppStateService.SelectionChanged -= OnSelectionChanged;
         _cts?.Cancel();
         _timer?.Dispose();
         _timer = null;

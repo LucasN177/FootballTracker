@@ -61,7 +61,20 @@ public class Game
         public int MatchDay => Group?.GroupOrderId ?? 0;
         public MatchResult? FinalResult => MatchResults.FirstOrDefault(r => r.ResultTypeId == 2);
         public MatchResult? HalfTimeResult => MatchResults.FirstOrDefault(r => r.ResultTypeId == 1);
-        public string DisplayResult => FinalResult != null ? $"{FinalResult.PointsTeam1}:{FinalResult.PointsTeam2}" : "-:-";
+        public MatchResult? ExtraTimeResult => MatchResults.FirstOrDefault(r => r.ResultTypeId == 3);
+        /// <summary>Ergebnis nach Elfmeterschießen (Pokal) – enthält die Tore aus dem Spiel plus verwandelte Elfmeter.</summary>
+        public MatchResult? PenaltyResult => MatchResults.FirstOrDefault(r => r.ResultTypeId == 5);
+        /// <summary>Spielstand nach regulärer Spielzeit bzw. Verlängerung, ohne Elfmeterschießen.</summary>
+        public MatchResult? RegulationResult => ExtraTimeResult ?? FinalResult;
+
+        /// <summary>Tore ohne Elfmeterschießen – OpenLigaDB listet dort auch die verwandelten Elfmeter als Tore.</summary>
+        public IEnumerable<Goal> RegularGoals => PenaltyResult != null && RegulationResult is { } regulation
+                ? Goals.Where(g => g.ScoreTeam1 + g.ScoreTeam2 <= regulation.PointsTeam1 + regulation.PointsTeam2)
+                : Goals;
+        /// <summary>Spiel wurde verlängert (Ergebnis nach Verlängerung weicht vom 90-Minuten-Ergebnis ab).</summary>
+        public bool WentToExtraTime => ExtraTimeResult is { } extra && FinalResult is { } final
+                && (extra.PointsTeam1 != final.PointsTeam1 || extra.PointsTeam2 != final.PointsTeam2);
+        public string DisplayResult => RegulationResult is { } result ? $"{result.PointsTeam1}:{result.PointsTeam2}" : "-:-";
         public bool IsToday => MatchDateTime.Date == DateTime.Today;
         public bool HasStarted => StartUtc <= DateTime.UtcNow;
         public bool IsUpcoming => !MatchIsFinished && !HasStarted;
@@ -72,9 +85,9 @@ public class Game
         {
                 get
                 {
-                        if (FinalResult != null)
-                                return (FinalResult.PointsTeam1, FinalResult.PointsTeam2);
-                        var lastGoal = Goals.LastOrDefault();
+                        if (RegulationResult is { } result)
+                                return (result.PointsTeam1, result.PointsTeam2);
+                        var lastGoal = RegularGoals.LastOrDefault();
                         if (lastGoal != null)
                                 return (lastGoal.ScoreTeam1, lastGoal.ScoreTeam2);
                         if (HalfTimeResult != null)

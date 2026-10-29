@@ -41,11 +41,11 @@
             </a>
         </div>
 
-        @if (Game.Goals.Any())
+        @if (Game.RegularGoals.Any())
         {
             <MudDivider Class="my-3" />
             <MudStack Spacing="1">
-                @foreach (var goal in Game.Goals.Take(MaxGoals))
+                @foreach (var goal in Game.RegularGoals.Take(MaxGoals))
                 {
                     <div class="goal-item d-flex justify-space-between align-center">
                         <MudText Typo="Typo.caption" Class="ft-ellipsis">
@@ -56,9 +56,9 @@
                         <MudText Typo="Typo.caption" Class="font-weight-bold">@goal.ScoreTeam1:@goal.ScoreTeam2</MudText>
                     </div>
                 }
-                @if (Game.Goals.Count > MaxGoals)
+                @if (Game.RegularGoals.Count() > MaxGoals)
                 {
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">+ @(Game.Goals.Count - MaxGoals) weitere Tore</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">+ @(Game.RegularGoals.Count() - MaxGoals) weitere Tore</MudText>
                 }
             </MudStack>
         }

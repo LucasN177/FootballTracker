@@ -1,0 +1,39 @@
+@* Zeigt den Inhalt nur für Ligen an – bei Pokalwettbewerben einen Hinweis mit Wechsel-Möglichkeit. *@
+@implements IDisposable
+@inject AppStateService AppStateService
+
+@if (AppStateService.SelectedCompetition.IsLeague)
+{
+    @ChildContent
+}
+else
+{
+    <MudPaper Class="ft-card pa-8" Elevation="0" Outlined="true">
+        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Style="font-size: 3rem" />
+            <MudText Typo="Typo.h6" Align="Align.Center">Nur für Ligen verfügbar</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary" Align="Align.Center" Style="max-width: 460px">
+                @Text
+            </MudText>
+            <div class="d-flex flex-wrap justify-center gap-2 mt-2">
+                @foreach (var competition in Competition.All.Where(c => c.IsLeague))
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="() => AppStateService.SetCompetition(competition)">
+                        @competition.ShortName anzeigen
+                    </MudButton>
+                }
+            </div>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public string Text { get; set; } = "Diese Auswertung basiert auf der Tabelle und ist im Pokal nicht sinnvoll.";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized() => AppStateService.OnChange += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => AppStateService.OnChange -= OnChanged;
+}

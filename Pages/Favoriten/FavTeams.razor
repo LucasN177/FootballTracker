@@ -40,16 +40,20 @@
                             <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="56" />
                             <div class="flex-grow-1" style="min-width: 0">
                                 <MudLink Href="@($"TeamDetailsPage/{team.Id}")" Typo="Typo.h6" Color="Color.Inherit" Class="ft-ellipsis d-block">@team.Name</MudLink>
-                                @if (fav.InSeason)
+                                @if (fav.InSeason && team.TabellenPlatz == 0)
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Im @AppStateService.SelectedCompetition.Name @AppStateService.SelectedSeason.Name dabei</MudText>
+                                }
+                                else if (fav.InSeason)
                                 {
                                     <div class="d-flex align-center gap-2">
-                                        <span class="@($"ft-pos ft-pos-{TablePositions.GetZone(team.TabellenPlatz, _table.Count)}")">@team.TabellenPlatz</span>
+                                        <span class="@($"ft-pos ft-pos-{TablePositions.GetZone(AppStateService.SelectedCompetition, team.TabellenPlatz, _table.Count)}")">@team.TabellenPlatz</span>
                                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@team.Punkte Pkt. • @team.Tore:@team.Gegentore Tore</MudText>
                                     </div>
                                 }
                                 else
                                 {
-                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Nicht in der Bundesliga @AppStateService.SelectedSeason.Name</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Nicht im Wettbewerb (@AppStateService.SelectedCompetition.ShortName @AppStateService.SelectedSeason.Name)</MudText>
                                 }
                             </div>
                             <FavoriteButton Team="team" />
@@ -101,7 +105,7 @@
     protected override async Task LoadDataAsync()
     {
         await FavoritesService.EnsureLoadedAsync();
-        _table = await TabellenService.GetBundesligaTabelle(Season);
+        _table = await TabellenService.GetSeasonTeams(Season);
         _games = await GameService.GetSeasonGamesAsync(Season);
         BuildFavorites();
     }

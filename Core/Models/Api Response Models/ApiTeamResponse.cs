@@ -3,6 +3,14 @@ namespace FootballTracker.Core.Models.Api_Response_Models;
 public class ApiTeamResponse
 {
     public int teamInfoId { get; set; }
+
+    /// <summary>Der Endpunkt getavailableteams liefert die ID als "teamId" statt "teamInfoId".</summary>
+    public int teamId
+    {
+        get => teamInfoId;
+        set => teamInfoId = value;
+    }
+
     public string teamName { get; set; } = string.Empty;
     public string shortName { get; set; } = string.Empty;
     public string teamIconUrl { get; set; } = string.Empty;

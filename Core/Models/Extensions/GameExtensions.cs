@@ -46,9 +46,17 @@ public static class GameExtensions
     {
         var score = game.CurrentScore;
         if (score != null)
-            return $"{score.Value.Team1}{separator}{score.Value.Team2}";
+            return $"{score.Value.Team1}{separator}{score.Value.Team2}{(game.PenaltyResult != null ? " n.E." : game.WentToExtraTime ? " n.V." : "")}";
 
         return game.IsUpcoming ? game.GetFormattedDateTime("HH:mm") : $"-{separator}-";
+    }
+
+    /// <summary>Elfmeterschießen-Ergebnis, z.B. "6:5 i.E." (ohne die Tore aus dem Spiel).</summary>
+    public static string? GetPenaltyShootoutDisplay(this Game game)
+    {
+        if (game.PenaltyResult is not { } penalties || game.RegulationResult is not { } regulation)
+            return null;
+        return $"{penalties.PointsTeam1 - regulation.PointsTeam1}:{penalties.PointsTeam2 - regulation.PointsTeam2} i.E.";
     }
 
     public static bool Involves(this Game game, int teamId) => game.Team1.Id == teamId || game.Team2.Id == teamId;
@@ -64,12 +72,19 @@ public static class GameExtensions
             return null;
 
         var (own, other) = game.GetGoalsFor(teamId);
+        if (own == other && game.PenaltyResult is { } penalties)
+        {
+            // Pokalspiel nach Elfmeterschießen: Sieger ist das Team mit mehr verwandelten Elfmetern
+            (own, other) = game.IsHomeTeam(teamId)
+                ? (penalties.PointsTeam1, penalties.PointsTeam2)
+                : (penalties.PointsTeam2, penalties.PointsTeam1);
+        }
         return own > other ? 'S' : own == other ? 'U' : 'N';
     }
 
     public static (int Own, int Other) GetGoalsFor(this Game game, int teamId)
     {
-        var result = game.FinalResult;
+        var result = game.RegulationResult;
         if (result == null)
             return (0, 0);
         return game.IsHomeTeam(teamId)

@@ -146,7 +146,7 @@
     private List<ChartSeries> _minuteSeries = new();
     private int? _loadedPlayerId;
 
-    private readonly ChartOptions _lineOptions = new() { ChartPalette = ["#d20a11"], LineStrokeWidth = 3, InterpolationOption = InterpolationOption.Straight };
+    private readonly ChartOptions _lineOptions = new() { LineStrokeWidth = 3, InterpolationOption = InterpolationOption.Straight };
     private readonly ChartOptions _barOptions = new() { ChartPalette = ["#2e7d32"], YAxisTicks = 1 };
     private readonly ChartOptions _minuteOptions = new() { ChartPalette = ["#1976d2"], YAxisTicks = 1 };
 
@@ -162,6 +162,7 @@
 
     protected override async Task LoadDataAsync()
     {
+        _lineOptions.ChartPalette = [AppStateService.SelectedCompetition.PrimaryColor];
         _loadedPlayerId = PlayerId;
         await FavoritesService.EnsureLoadedAsync();
         _player = await StatisticsService.GetPlayerAsync(Season, PlayerId);
@@ -170,7 +171,7 @@
 
         var games = await GameService.GetSeasonGamesAsync(Season);
         var playedMatchDays = Math.Max(1, GameService.GetPlayedMatchDays(games));
-        _labels = ChartHelper.MatchDayLabels(playedMatchDays);
+        _labels = ChartHelper.RoundLabels(AppStateService.SelectedCompetition, playedMatchDays);
         _goals = _player.Events.OrderByDescending(e => e.Game.MatchDateTimeUtc).ThenByDescending(e => e.Goal.MatchMinute).ToList();
 
         _teamGoals = _player.Team == null

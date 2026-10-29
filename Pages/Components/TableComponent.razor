@@ -36,7 +36,7 @@
                     @foreach (var team in _teams.Take(Count))
                     {
                         <tr class="ft-clickable" @onclick="() => NavigationManager.NavigateTo(TeamUrl(team))">
-                            <td><span class="@($"ft-pos ft-pos-{TablePositions.GetZone(team.TabellenPlatz, _teams.Count)}")">@team.TabellenPlatz</span></td>
+                            <td><span class="@($"ft-pos ft-pos-{TablePositions.GetZone(AppStateService.SelectedCompetition, team.TabellenPlatz, _teams.Count)}")">@team.TabellenPlatz</span></td>
                             <td>
                                 <div class="d-flex align-center gap-2">
                                     <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="22" />
@@ -61,7 +61,7 @@
 
     protected override async Task LoadDataAsync()
     {
-        _teams = await TabellenService.GetBundesligaTabelle(Season);
+        _teams = await TabellenService.GetTabelle(Season);
     }
 
     private static string TeamUrl(Team team) => $"TeamDetailsPage/{team.Id}";

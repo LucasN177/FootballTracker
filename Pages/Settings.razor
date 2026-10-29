@@ -21,6 +21,15 @@
                 <MudSwitch T="bool" Value="AppStateService.IsDarkMode" ValueChanged="AppStateService.SetDarkMode" Color="Color.Primary" />
             </div>
             <MudDivider Class="my-4" />
+            <MudText Typo="Typo.body1" Class="mb-2">Wettbewerb</MudText>
+            <MudSelect T="string" Value="AppStateService.SelectedCompetition.Shortcut"
+                       ValueChanged="shortcut => AppStateService.SetCompetition(Competition.All.First(c => c.Shortcut == shortcut))"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4">
+                @foreach (var competition in Competition.All)
+                {
+                    <MudSelectItem T="string" Value="competition.Shortcut">@competition.Name</MudSelectItem>
+                }
+            </MudSelect>
             <MudText Typo="Typo.body1" Class="mb-2">Saison</MudText>
             <MudSelect T="int" Value="AppStateService.SelectedSeason.Year" ValueChanged="year => AppStateService.SetSeason(Season.FromYear(year))"
                        Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Alle Seiten zeigen Daten der gewählten Saison">

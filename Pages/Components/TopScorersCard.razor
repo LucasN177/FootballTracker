@@ -1,0 +1,43 @@
+@* Kompakte Torjägerliste, z.B. für das Dashboard im Pokal. *@
+@inherits SeasonPageBase
+@inject StatisticsService StatisticsService
+@inject NavigationManager NavigationManager
+
+<MudPaper Class="ft-card pa-4 pa-md-5" Elevation="0" Outlined="true">
+    <div class="d-flex align-center justify-space-between mb-2">
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Whatshot" Color="Color.Primary" />
+            <MudText Typo="Typo.h6" Class="font-weight-bold">Torjäger</MudText>
+        </div>
+        <MudButton Href="GoalGetters" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" EndIcon="@Icons.Material.Filled.ChevronRight">
+            Alle
+        </MudButton>
+    </div>
+
+    <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!_players.Any()" EmptyTitle="Noch keine Tore">
+        <MudList T="PlayerSeasonStats" Dense="true" Padding="false">
+            @foreach (var player in _players)
+            {
+                <MudListItem T="PlayerSeasonStats" OnClick="@(() => NavigationManager.NavigateTo($"spieler/{player.PlayerId}"))">
+                    <div class="d-flex align-center gap-3">
+                        <span class="ft-rank" style="min-width: 22px">@player.Rank</span>
+                        <TeamLogo Url="@player.Team?.LogoUrl" Name="@player.Team?.Name" Size="22" />
+                        <MudText Typo="Typo.body2" Class="flex-grow-1 ft-ellipsis font-weight-medium">@player.Name</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="ma-0 font-weight-bold">@player.GoalCount</MudChip>
+                    </div>
+                </MudListItem>
+            }
+        </MudList>
+    </DataState>
+</MudPaper>
+
+@code {
+    [Parameter] public int Count { get; set; } = 8;
+
+    private List<PlayerSeasonStats> _players = new();
+
+    protected override async Task LoadDataAsync()
+    {
+        _players = (await StatisticsService.GetPlayerStatsAsync(Season)).Where(p => p.GoalCount > 0).Take(Count).ToList();
+    }
+}

@@ -9,7 +9,7 @@
 <PageTitle>@(_team?.Name ?? "Team") • Bundesliga Tracker</PageTitle>
 
 <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_team == null"
-           EmptyTitle="Team nicht gefunden" EmptyText="@($"Das Team spielt in der Saison {AppStateService.SelectedSeason.Name} nicht in der Bundesliga.")">
+           EmptyTitle="Team nicht gefunden" EmptyText="@($"Das Team spielt in der Saison {AppStateService.SelectedSeason.Name} nicht im Wettbewerb {Comp.Name}.")">
     <LoadingContent>
         <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" Class="rounded-lg mb-4" />
         <MudGrid Spacing="3">
@@ -30,14 +30,21 @@
                         <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="96" />
                     </div>
                     <div class="flex-grow-1" style="min-width: 0">
-                        <MudText Typo="Typo.overline" Class="ft-hero-overline">Saison @AppStateService.SelectedSeason.Name</MudText>
+                        <MudText Typo="Typo.overline" Class="ft-hero-overline">@Comp.ShortName • Saison @AppStateService.SelectedSeason.Name</MudText>
                         <MudText Typo="Typo.h4" Class="ft-hero-title">@team.Name</MudText>
                         <div class="d-flex flex-wrap align-center gap-2 mt-2">
-                            @if (team.TabellenPlatz > 0)
+                            @if (Comp.IsCup)
                             {
-                                <MudChip T="string" Color="Color.Surface" Size="Size.Small" Class="ma-0">Platz @team.TabellenPlatz</MudChip>
+                                <MudChip T="string" Color="Color.Surface" Size="Size.Small" Class="ma-0">@CupStatus</MudChip>
                             }
-                            <MudChip T="string" Color="Color.Surface" Size="Size.Small" Class="ma-0">@team.Punkte Punkte</MudChip>
+                            else
+                            {
+                                @if (team.TabellenPlatz > 0)
+                                {
+                                    <MudChip T="string" Color="Color.Surface" Size="Size.Small" Class="ma-0">Platz @team.TabellenPlatz</MudChip>
+                                }
+                                <MudChip T="string" Color="Color.Surface" Size="Size.Small" Class="ma-0">@team.Punkte Punkte</MudChip>
+                            }
                             <FormChips Form="@team.Form" />
                         </div>
                     </div>
@@ -50,22 +57,29 @@
             <!-- KENNZAHLEN -->
             <MudGrid Spacing="3" Class="mb-2">
                 <MudItem xs="6" md="3">
-                    <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Value="@(team.TabellenPlatz > 0 ? $"{team.TabellenPlatz}." : "–")" Label="Tabellenplatz" />
+                    @if (Comp.IsCup)
+                    {
+                        <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Value="@(_reachedRound > 0 ? Comp.RoundName(_reachedRound) : "–")" Label="Erreichte Runde" Hint="@CupStatus" />
+                    }
+                    else
+                    {
+                        <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Value="@(team.TabellenPlatz > 0 ? $"{team.TabellenPlatz}." : "–")" Label="Tabellenplatz" />
+                    }
                 </MudItem>
                 <MudItem xs="6" md="3">
-                    <StatCard Icon="@Icons.Material.Filled.Leaderboard" Color="Color.Info" Value="@($"{team.Siege} / {team.Unentschieden} / {team.Niederlagen}")" Label="Siege / Remis / Niederl." />
+                    <StatCard Icon="@Icons.Material.Filled.Leaderboard" Color="Color.Info" Value="@($"{_total?.Won ?? 0} / {_total?.Draw ?? 0} / {_total?.Lost ?? 0}")" Label="Siege / Remis / Niederl." />
                 </MudItem>
                 <MudItem xs="6" md="3">
-                    <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Success" Value="@($"{team.Tore}:{team.Gegentore}")" Label="Torverhältnis" Hint="@($"{(team.Differenz > 0 ? "+" : "")}{team.Differenz}")" />
+                    <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Success" Value="@($"{_total?.GoalsFor ?? 0}:{_total?.GoalsAgainst ?? 0}")" Label="Torverhältnis" Hint="@($"{(_total?.GoalDifference > 0 ? "+" : "")}{_total?.GoalDifference ?? 0}")" />
                 </MudItem>
                 <MudItem xs="6" md="3">
-                    <StatCard Icon="@Icons.Material.Filled.Percent" Color="Color.Primary" Value="@($"{_total?.WinRate ?? 0:0}%")" Label="Siegquote" Hint="@($"{_total?.PointsPerGame ?? 0:0.00} Punkte/Spiel")" />
+                    <StatCard Icon="@Icons.Material.Filled.Percent" Color="Color.Primary" Value="@($"{_total?.WinRate ?? 0:0}%")" Label="Siegquote" Hint="@(Comp.IsLeague ? $"{_total?.PointsPerGame ?? 0:0.00} Punkte/Spiel" : null)" />
                 </MudItem>
             </MudGrid>
 
             <MudGrid Spacing="3">
-                <!-- Punkteverlauf -->
-                <MudItem xs="12" lg="8">
+                <!-- Punkteverlauf (nur Ligen) -->
+                <MudItem xs="12" lg="8" Class="@(Comp.IsCup ? "d-none" : "")">
                     <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
                         <MudText Typo="Typo.h6" Class="mb-1">Saisonverlauf</MudText>
                         @if (_playedMatchDays > 0)
@@ -73,7 +87,7 @@
                             <MudTabs Elevation="0" Rounded="true" PanelClass="pt-2" Color="Color.Transparent" SliderColor="Color.Primary" MinimumTabWidth="90px">
                                 <MudTabPanel Text="Tabellenplatz">
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">Platzierung nach jedem Spieltag</MudText>
-                                    <PositionChart Series="_positionSeries" MatchDays="_playedMatchDays" TeamCount="_teamCount" Height="320" />
+                                    <PositionChart Series="_positionSeries" MatchDays="_playedMatchDays" TeamCount="_teamCount" Height="320" Competition="Comp" />
                                 </MudTabPanel>
                                 <MudTabPanel Text="Punkte">
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary">Kumulierte Punkte im Vergleich zum Tabellenführer</MudText>
@@ -90,7 +104,7 @@
                 </MudItem>
 
                 <!-- Heim / Auswärts -->
-                <MudItem xs="12" lg="4">
+                <MudItem xs="12" lg="@(Comp.IsCup ? 12 : 4)">
                     <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
                         <MudText Typo="Typo.h6" Class="mb-3">Heim & Auswärts</MudText>
                         @foreach (var (label, record, icon) in new[] { ("Heim", _home, Icons.Material.Filled.Home), ("Auswärts", _away, Icons.Material.Filled.FlightTakeoff) })
@@ -99,7 +113,7 @@
                                 <div class="d-flex align-center gap-2 mb-1">
                                     <MudIcon Icon="@icon" Size="Size.Small" Class="mud-text-secondary" />
                                     <MudText Typo="Typo.subtitle2" Class="flex-grow-1">@label</MudText>
-                                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">@(record?.Points ?? 0) Pkt.</MudText>
+                                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">@(Comp.IsLeague ? $"{record?.Points ?? 0} Pkt." : $"{record?.Played ?? 0} Spiele")</MudText>
                                 </div>
                                 <div class="ft-wdl-bar">
                                     <span class="win" style="@WdlWidth(record?.Won, record?.Played)"></span>
@@ -167,7 +181,7 @@
                                 var outcome = game.GetOutcomeFor(team.Id);
                                 var opponent = game.GetOpponent(team.Id);
                                 <div class="@($"ft-fixture {(game == _nextGame ? "next" : "")}")" @onclick="() => GameDetailsDialog.Show(DialogService, game)">
-                                    <MudText Typo="Typo.caption" Class="mud-text-secondary ft-fixture-day">@game.MatchDay.</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary ft-fixture-day">@(Comp.IsCup ? Comp.RoundShortName(game.MatchDay) : $"{game.MatchDay}.")</MudText>
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary ft-fixture-date">@game.GetFormattedDateTime("dd.MM.")</MudText>
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0 ft-fixture-venue">@(game.IsHomeTeam(team.Id) ? "H" : "A")</MudChip>
                                     <TeamLogo Url="@opponent.LogoUrl" Name="@opponent.Name" Size="22" />
@@ -209,10 +223,24 @@
     private List<ChartSeries> _pointsSeries = new();
     private List<PositionChart.PositionSeries> _positionSeries = new();
     private int _teamCount = 18;
+    private int _reachedRound;
+    private Competition Comp => AppStateService.SelectedCompetition;
+
+    /// <summary>Pokalstatus: noch dabei, ausgeschieden oder Pokalsieger.</summary>
+    private string CupStatus
+    {
+        get
+        {
+            var last = _games.LastOrDefault(g => g.MatchIsFinished);
+            if (_nextGame != null || last == null)
+                return "Noch im Wettbewerb";
+            var won = last.GetOutcomeFor(TeamId) == 'S';
+            return won && last.MatchDay == Comp.RoundCount ? "Pokalsieger" : won ? "Noch im Wettbewerb" : $"Ausgeschieden ({Comp.RoundName(last.MatchDay)})";
+        }
+    }
     private string[] _matchDayLabels = [];
     private readonly ChartOptions _lineOptions = new()
     {
-        ChartPalette = ["#d20a11", "#9ca3af"],
         LineStrokeWidth = 3,
         InterpolationOption = InterpolationOption.Straight,
         YAxisTicks = 10
@@ -242,6 +270,7 @@
 
     protected override async Task LoadDataAsync()
     {
+        _lineOptions.ChartPalette = [AppStateService.SelectedCompetition.PrimaryColor, "#9ca3af"];
         _loadedTeamId = TeamId;
         _team = await TeamService.GetTeamAsync(Season, TeamId);
         if (_team == null)
@@ -250,6 +279,7 @@
         var seasonGames = await GameService.GetSeasonGamesAsync(Season);
         _games = seasonGames.Where(g => g.Involves(TeamId)).OrderBy(g => g.MatchDateTimeUtc).ToList();
         _nextGame = _games.FirstOrDefault(g => !g.MatchIsFinished);
+        _reachedRound = _games.Select(g => g.MatchDay).DefaultIfEmpty(0).Max();
 
         var teamGames = _games;
         _total = StatisticsService.BuildRecords(teamGames).FirstOrDefault(r => r.Team.Id == TeamId);

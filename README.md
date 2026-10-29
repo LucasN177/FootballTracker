@@ -12,7 +12,8 @@ Mit **FootballTracker** kann man Spieltage, Teams und Ergebnisse aus der OpenLig
 
 - 🏠 **Dashboard** mit Kennzahlen, aktuellem Spieltag, Tabelle und Team-Check
 - 🔴 **Live Scores** mit automatischer Aktualisierung
-- 🏆 **Tabelle** (gesamt, Heim, Auswärts) inkl. Form und farbigen Tabellenzonen
+- 🏆 **Wettbewerbe**: 1. Bundesliga, 2. Bundesliga und DFB-Pokal (mit Turnierverlauf)
+- 📈 **Tabelle** (gesamt, Heim, Auswärts) inkl. Form, farbigen Tabellenzonen und Tabellenverlauf
 - 📅 **Spieltage** mit Filtern, Suche und Spieldetails (Torverlauf, Halbzeit, Zuschauer)
 - 👥 **Teams** und **Team-Detailseiten** mit Punkteverlauf, Heim/Auswärts-Bilanz, Torschützen und Spielplan
 - 🥅 **Torschützenliste** mit Suche
