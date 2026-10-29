@@ -1,0 +1,94 @@
+@* Tabellenverlauf als SVG: Platz 1 oben, Tabellenzonen im Hintergrund. *@
+@using System.Globalization
+
+@if (MatchDays == 0 || !Series.Any())
+{
+    <MudText Class="mud-text-secondary py-8" Align="Align.Center">@EmptyText</MudText>
+}
+else
+{
+    <svg viewBox="0 0 @Num(Width) @Num(Height)" class="ft-position-chart" role="img" aria-label="Tabellenverlauf">
+        @if (ShowZones)
+        {
+            @for (var position = 1; position <= TeamCount; position++)
+            {
+                var zone = TablePositions.GetZone(position, TeamCount);
+                if (zone != "none")
+                {
+                    <rect x="@Num(PadLeft)" y="@Num(Y(position) - RowHeight / 2)" width="@Num(PlotWidth)" height="@Num(RowHeight)" class="@($"ft-zone ft-zone-{zone}")" />
+                }
+            }
+        }
+
+        @for (var position = 1; position <= TeamCount; position++)
+        {
+            <g>
+                <line x1="@Num(PadLeft)" x2="@Num(PadLeft + PlotWidth)" y1="@Num(Y(position))" y2="@Num(Y(position))" class="ft-chart-grid" />
+                <text x="@Num(PadLeft - 8)" y="@Num(Y(position))" class="ft-chart-axis" text-anchor="end" dominant-baseline="middle">@position</text>
+            </g>
+        }
+
+        @for (var day = 1; day <= MatchDays; day++)
+        {
+            if (day == 1 || day % 5 == 0 || day == MatchDays)
+            {
+                <g>
+                    <text x="@Num(X(day))" y="@Num(Height - 6)" class="ft-chart-axis" text-anchor="middle">@day</text>
+                </g>
+            }
+        }
+
+        @foreach (var (series, index) in Series.Select((s, i) => (s, i)))
+        {
+            var color = series.Color ?? ChartHelper.SeriesColors[index % ChartHelper.SeriesColors.Length];
+            var points = series.Positions.Take(MatchDays).Select((p, i) => (Day: i + 1, Position: p)).Where(p => p.Position > 0).ToList();
+            if (points.Count == 0)
+            {
+                continue;
+            }
+
+            var last = points[^1];
+            <g class="ft-chart-series">
+                <polyline points="@string.Join(" ", points.Select(p => $"{Num(X(p.Day))},{Num(Y(p.Position))}"))"
+                          fill="none" stroke="@color" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
+                @foreach (var point in points)
+                {
+                    <circle cx="@Num(X(point.Day))" cy="@Num(Y(point.Position))" r="@(point == last ? "5" : "3")" fill="@color" class="ft-chart-point">
+                        <title>@series.Name – @point.Day. Spieltag: Platz @point.Position</title>
+                    </circle>
+                }
+                <text x="@Num(X(last.Day) + 10)" y="@Num(Y(last.Position))" fill="@color" class="ft-chart-label" dominant-baseline="middle">
+                    @last.Position. @series.Name
+                </text>
+            </g>
+        }
+    </svg>
+}
+
+@code {
+    public record PositionSeries(string Name, int[] Positions, string? Color = null);
+
+    private const double Width = 800;
+    private const double PadLeft = 32;
+    private const double PadRight = 130;
+    private const double PadTop = 12;
+    private const double PadBottom = 26;
+
+    [Parameter] public IReadOnlyList<PositionSeries> Series { get; set; } = [];
+    [Parameter] public int MatchDays { get; set; }
+    [Parameter] public int TeamCount { get; set; } = 18;
+    [Parameter] public bool ShowZones { get; set; } = true;
+    [Parameter] public double Height { get; set; } = 380;
+    [Parameter] public string EmptyText { get; set; } = "Noch keine Spiele absolviert.";
+
+    private double PlotWidth => Width - PadLeft - PadRight;
+    private double PlotHeight => Height - PadTop - PadBottom;
+    private double RowHeight => PlotHeight / Math.Max(1, TeamCount - 1);
+
+    private double X(int day) => MatchDays <= 1 ? PadLeft + PlotWidth / 2 : PadLeft + (day - 1) * PlotWidth / (MatchDays - 1);
+
+    private double Y(int position) => PadTop + (position - 1) * RowHeight;
+
+    // SVG erwartet Punkt als Dezimaltrennzeichen – unabhängig von der deutschen Kultur.
+    private static string Num(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+}

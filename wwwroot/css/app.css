@@ -981,3 +981,41 @@ h1:focus {
     text-transform: none !important;
     font-weight: 600 !important;
 }
+
+/* Tabellenverlauf */
+.ft-position-chart {
+    width: 100%;
+    height: auto;
+    display: block;
+    overflow: visible;
+}
+
+.ft-chart-grid {
+    stroke: var(--mud-palette-lines-default);
+    stroke-width: 1;
+}
+
+.ft-chart-axis {
+    fill: var(--mud-palette-text-secondary);
+    font-size: 11px;
+}
+
+.ft-chart-label {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ft-chart-point {
+    cursor: default;
+}
+
+.ft-chart-series:hover polyline {
+    stroke-width: 5;
+}
+
+.ft-zone { opacity: 0.12; }
+.ft-zone-cl { fill: var(--ft-cl); }
+.ft-zone-el { fill: var(--ft-el); }
+.ft-zone-ecl { fill: var(--ft-ecl); }
+.ft-zone-rel { fill: var(--ft-rel); opacity: 0.2; }
+.ft-zone-down { fill: var(--ft-down); }

@@ -167,17 +167,23 @@ public class StatisticsService(GameService gameService)
         return pointsPerDay.Select(p => sum += p).ToArray();
     }
 
-    /// <summary>Tabellenplatz eines Teams nach jedem Spieltag.</summary>
-    public static double[] GetPositionProgression(IReadOnlyCollection<Game> games, int teamId, int matchDays)
+    /// <summary>
+    /// Tabellenplatz aller Teams nach jedem Spieltag (Index 0 = 1. Spieltag).
+    /// Nachholspiele zählen zu ihrem ursprünglichen Spieltag.
+    /// </summary>
+    public static Dictionary<int, int[]> GetPositionHistory(IReadOnlyCollection<Game> games, int matchDays)
     {
-        var positions = new double[matchDays];
+        var history = new Dictionary<int, int[]>();
+        foreach (var team in games.SelectMany(g => new[] { g.Team1, g.Team2 }).DistinctBy(t => t.Id))
+            history[team.Id] = new int[matchDays];
+
         for (var day = 1; day <= matchDays; day++)
         {
             var records = BuildRecords(games.Where(g => g.MatchDay <= day));
-            var index = records.FindIndex(r => r.Team.Id == teamId);
-            positions[day - 1] = index + 1;
+            for (var i = 0; i < records.Count; i++)
+                history[records[i].Team.Id][day - 1] = i + 1;
         }
-        return positions;
+        return history;
     }
 
     /// <summary>Tore pro Viertelstunde (0-15, 16-30, ..., 76-90+).</summary>

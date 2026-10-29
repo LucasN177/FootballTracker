@@ -67,12 +67,20 @@
                 <!-- Punkteverlauf -->
                 <MudItem xs="12" lg="8">
                     <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
-                        <MudText Typo="Typo.h6" Class="mb-1">Punkteverlauf</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Kumulierte Punkte im Vergleich zum Tabellenführer</MudText>
+                        <MudText Typo="Typo.h6" Class="mb-1">Saisonverlauf</MudText>
                         @if (_playedMatchDays > 0)
                         {
-                            <MudChart ChartType="ChartType.Line" ChartSeries="@_pointsSeries" XAxisLabels="@_matchDayLabels"
-                                      Width="100%" Height="300px" ChartOptions="@_lineOptions" />
+                            <MudTabs Elevation="0" Rounded="true" PanelClass="pt-2" Color="Color.Transparent" SliderColor="Color.Primary" MinimumTabWidth="90px">
+                                <MudTabPanel Text="Tabellenplatz">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">Platzierung nach jedem Spieltag</MudText>
+                                    <PositionChart Series="_positionSeries" MatchDays="_playedMatchDays" TeamCount="_teamCount" Height="320" />
+                                </MudTabPanel>
+                                <MudTabPanel Text="Punkte">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Kumulierte Punkte im Vergleich zum Tabellenführer</MudText>
+                                    <MudChart ChartType="ChartType.Line" ChartSeries="@_pointsSeries" XAxisLabels="@_matchDayLabels"
+                                              Width="100%" Height="300px" ChartOptions="@_lineOptions" />
+                                </MudTabPanel>
+                            </MudTabs>
                         }
                         else
                         {
@@ -199,6 +207,8 @@
     private bool _showAllGames;
 
     private List<ChartSeries> _pointsSeries = new();
+    private List<PositionChart.PositionSeries> _positionSeries = new();
+    private int _teamCount = 18;
     private string[] _matchDayLabels = [];
     private readonly ChartOptions _lineOptions = new()
     {
@@ -256,6 +266,12 @@
         {
             new() { Name = _team.DisplayName, Data = StatisticsService.GetPointsProgression(seasonGames, TeamId, _playedMatchDays) }
         };
+        var positionHistory = StatisticsService.GetPositionHistory(seasonGames, _playedMatchDays);
+        _teamCount = Math.Max(2, positionHistory.Count);
+        _positionSeries = positionHistory.TryGetValue(TeamId, out var positions)
+            ? [new PositionChart.PositionSeries(_team.DisplayName, positions)]
+            : [];
+
         if (leader != null && leader.Team.Id != TeamId)
             _pointsSeries.Add(new ChartSeries { Name = $"{leader.Team.DisplayName} (Tabellenführer)", Data = StatisticsService.GetPointsProgression(seasonGames, leader.Team.Id, _playedMatchDays) });
     }

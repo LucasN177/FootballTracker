@@ -2,6 +2,7 @@
 @inherits SeasonPageBase
 @inject TabellenService TabellenService
 @inject GameService GameService
+@inject FavoritesService FavoritesService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Tabelle • Bundesliga Tracker</PageTitle>
@@ -67,7 +68,29 @@
     }
 </div>
 
+@if (!IsLoading && string.IsNullOrEmpty(ErrorMessage) && _playedMatchDays > 0)
+{
+    <MudPaper Class="ft-card pa-4 pa-md-5 mt-5" Elevation="0" Outlined="true">
+        <div class="d-flex align-center flex-wrap gap-3 mb-3">
+            <div class="flex-grow-1">
+                <MudText Typo="Typo.h6">Tabellenverlauf</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Tabellenplatz nach jedem Spieltag – bis zu @MaxProgressionTeams Teams vergleichen</MudText>
+            </div>
+            <MudSelect T="int" MultiSelection="true" SelectedValues="_progressionTeamIds" SelectedValuesChanged="OnProgressionTeamsChanged"
+                       Label="Teams" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 260px; max-width: 420px"
+                       MultiSelectionTextFunc="@(values => $"{values.Count} Teams ausgewählt")">
+                @foreach (var team in _table)
+                {
+                    <MudSelectItem T="int" Value="team.Id">@team.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+        <PositionChart Series="_progressionSeries" MatchDays="_playedMatchDays" TeamCount="_table.Count" />
+    </MudPaper>
+}
+
 @code {
+    private const int MaxProgressionTeams = 6;
     private record TableRow(int Position, Team Team, int Played, int Won, int Draw, int Lost, int GoalsFor, int GoalsAgainst, int Points, string Form)
     {
         public int GoalDifference => GoalsFor - GoalsAgainst;
@@ -77,12 +100,35 @@
     private List<Team> _table = new();
     private List<Game> _games = new();
     private List<TableRow> _rows = new();
+    private int _playedMatchDays;
+    private Dictionary<int, int[]> _positionHistory = new();
+    private IEnumerable<int> _progressionTeamIds = [];
+    private List<PositionChart.PositionSeries> _progressionSeries = new();
 
     protected override async Task LoadDataAsync()
     {
         _table = await TabellenService.GetBundesligaTabelle(Season);
         _games = await GameService.GetSeasonGamesAsync(Season);
         BuildRows();
+
+        _playedMatchDays = GameService.GetPlayedMatchDays(_games);
+        _positionHistory = StatisticsService.GetPositionHistory(_games, _playedMatchDays);
+
+        // Vorauswahl: Lieblingsteams, sonst die Top 4
+        await FavoritesService.EnsureLoadedAsync();
+        var tableIds = _table.Select(t => t.Id).ToHashSet();
+        var favorites = FavoritesService.Teams.Select(f => f.TeamId).Where(tableIds.Contains).Take(MaxProgressionTeams).ToList();
+        OnProgressionTeamsChanged(favorites.Any() ? favorites : _table.Take(4).Select(t => t.Id));
+    }
+
+    private void OnProgressionTeamsChanged(IEnumerable<int> teamIds)
+    {
+        _progressionTeamIds = teamIds.Take(MaxProgressionTeams).ToList();
+        var teamsById = _table.ToDictionary(t => t.Id);
+        _progressionSeries = _progressionTeamIds
+            .Where(id => teamsById.ContainsKey(id) && _positionHistory.ContainsKey(id))
+            .Select(id => new PositionChart.PositionSeries(teamsById[id].DisplayName, _positionHistory[id]))
+            .ToList();
     }
 
     private void ChangeView(string view)
