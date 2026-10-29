@@ -6,7 +6,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 
-<PageTitle>@(_team?.Name ?? "Team") • Bundesliga Tracker</PageTitle>
+<PageTitle>@(_team?.Name ?? "Team") • Football Tracker</PageTitle>
 
 <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_team == null"
            EmptyTitle="Team nicht gefunden" EmptyText="@($"Das Team spielt in der Saison {AppStateService.SelectedSeason.Name} nicht im Wettbewerb {Comp.Name}.")">
