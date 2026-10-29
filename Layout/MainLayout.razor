@@ -35,7 +35,7 @@
                 <img src="@AppStateService.SelectedCompetition.LogoUrl" alt="@AppStateService.SelectedCompetition.ShortName" />
                 @if (AppStateService.SelectedCompetition.LogoIsWordmark)
                 {
-                    <span class="ft-brand-logo-short">2.</span>
+                    <span class="ft-brand-logo-short">@AppStateService.SelectedCompetition.LogoShortText</span>
                 }
             </span>
             <MudHidden Breakpoint="Breakpoint.Xs">

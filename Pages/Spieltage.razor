@@ -34,7 +34,7 @@
 
 <MudGrid Spacing="3" Class="mb-4">
     <MudItem xs="6" md="3">
-        <StatCard Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Info" Value="@(Comp.IsCup ? Comp.RoundName(_selectedMatchDay) : $"{_selectedMatchDay}.")" Label="@Comp.RoundLabel" Hint="@(_selectedMatchDay == _currentMatchDay ? "aktuell" : null)" />
+        <StatCard Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Info" Value="@(_selectedMatchDay > Comp.TableRounds ? Comp.RoundName(_selectedMatchDay) : $"{_selectedMatchDay}.")" Label="@(_selectedMatchDay > Comp.TableRounds ? "Runde" : Comp.RoundLabel)" Hint="@(_selectedMatchDay == _currentMatchDay ? "aktuell" : null)" />
     </MudItem>
     <MudItem xs="6" md="3">
         <StatCard Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Value="@_allGames.Count(g => g.MatchIsFinished).ToString()" Label="Beendete Spiele" />

@@ -1090,3 +1090,9 @@ h1:focus {
     padding: 0 8px;
     white-space: nowrap;
 }
+
+/* Zonen Champions League (Ligaphase) */
+.ft-pos-ko { background: var(--ft-ecl); color: white; }
+.ft-pos-po { background: #1565c0; color: white; }
+.ft-zone-ko { fill: var(--ft-ecl); }
+.ft-zone-po { fill: #1565c0; opacity: 0.08; }

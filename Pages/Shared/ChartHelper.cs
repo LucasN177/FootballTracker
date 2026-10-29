@@ -6,7 +6,7 @@ public static class ChartHelper
 {
 
     /// <summary>Achsenbeschriftung je Spieltag bzw. Pokalrunde.</summary>
-    public static string[] RoundLabels(Competition competition, int count) => competition.IsCup
+    public static string[] RoundLabels(Competition competition, int count) => competition.RoundShortNames.Length > 0
         ? Enumerable.Range(1, count).Select(competition.RoundShortName).ToArray()
         : MatchDayLabels(count);
 

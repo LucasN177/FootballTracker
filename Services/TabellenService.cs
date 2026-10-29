@@ -3,7 +3,7 @@ using FootballTracker.Core.Models;
 
 namespace FootballTracker.Services;
 
-public class TabellenService(IOpenLigaDataRepository openLigaDataRepository, StatisticsService statisticsService, AppStateService appStateService)
+public class TabellenService(IOpenLigaDataRepository openLigaDataRepository, StatisticsService statisticsService, AppStateService appStateService, GameService gameService)
 {
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(2);
     private readonly Dictionary<(string League, int Season), (DateTime LoadedAt, List<Team> Teams)> _tableCache = new();
@@ -18,6 +18,16 @@ public class TabellenService(IOpenLigaDataRepository openLigaDataRepository, Sta
         if (!forceRefresh && _tableCache.TryGetValue(key, out var cached)
                           && (year != AppStateService.CurrentSeasonYear || DateTime.Now - cached.LoadedAt < CacheDuration))
             return cached.Teams;
+
+        if (appStateService.SelectedCompetition.LeaguePhaseRounds > 0)
+        {
+            var leaguePhaseTable = await BuildLeaguePhaseTable(year);
+            if (leaguePhaseTable.Any())
+            {
+                _tableCache[key] = (DateTime.Now, leaguePhaseTable);
+                return leaguePhaseTable;
+            }
+        }
 
         var result = await openLigaDataRepository.GetTable(key.League, year);
         if (result is not { IsSuccess: true, Data: not null })
@@ -47,6 +57,36 @@ public class TabellenService(IOpenLigaDataRepository openLigaDataRepository, Sta
 
         await statisticsService.EnrichTeamsAsync(year, teams);
         _tableCache[key] = (DateTime.Now, teams);
+        return teams;
+    }
+
+    /// <summary>
+    /// Tabelle der Ligaphase (Champions League). OpenLigaDB rechnet dort auch K.-o.-Spiele ein,
+    /// daher wird sie aus den Spielen der Ligaphase berechnet.
+    /// </summary>
+    private async Task<List<Team>> BuildLeaguePhaseTable(int year)
+    {
+        var competition = appStateService.SelectedCompetition;
+        var games = (await gameService.GetSeasonGamesAsync(year)).Where(competition.IsLeaguePhase).ToList();
+        var teams = StatisticsService.BuildRecords(games)
+            .Select((record, index) => new Team
+            {
+                Id = record.Team.Id,
+                Name = record.Team.Name,
+                ShortName = record.Team.ShortName,
+                LogoUrl = record.Team.LogoUrl,
+                TabellenPlatz = index + 1,
+                Spiele = record.Played,
+                Siege = record.Won,
+                Unentschieden = record.Draw,
+                Niederlagen = record.Lost,
+                Tore = record.GoalsFor,
+                Gegentore = record.GoalsAgainst,
+                Punkte = record.Points
+            })
+            .ToList();
+
+        await statisticsService.EnrichTeamsAsync(year, teams);
         return teams;
     }
 

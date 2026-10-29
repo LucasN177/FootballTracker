@@ -110,7 +110,7 @@
     protected override async Task LoadDataAsync()
     {
         _lineOptions.ChartPalette = AppStateService.SelectedCompetition.ChartColors;
-        _games = await GameService.GetSeasonGamesAsync(Season);
+        _games = (await GameService.GetSeasonGamesAsync(Season)).Where(AppStateService.SelectedCompetition.IsLeaguePhase).ToList();
         _table = await TabellenService.GetTabelle(Season);
         _playedMatchDays = GameService.GetPlayedMatchDays(_games);
         _labels = ChartHelper.MatchDayLabels(_playedMatchDays);

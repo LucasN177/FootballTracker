@@ -98,12 +98,19 @@ else
         <PositionChart Series="_progressionSeries" MatchDays="_playedMatchDays" TeamCount="_table.Count" Competition="Comp" />
     </MudPaper>
 }
+
+@if (!IsLoading && _knockoutGames.Any())
+{
+    <MudText Typo="Typo.h5" Class="mt-6 mb-3">K.-o.-Phase</MudText>
+    <CupRounds Games="_knockoutGames" Competition="Comp" HighlightTeamIds="_favoriteTeamIds" />
+}
 }
 
 @code {
     private const int MaxProgressionTeams = 6;
     private Competition Comp => AppStateService.SelectedCompetition;
     private int[] _favoriteTeamIds = [];
+    private List<Game> _knockoutGames = new();
     private record TableRow(int Position, Team Team, int Played, int Won, int Draw, int Lost, int GoalsFor, int GoalsAgainst, int Points, string Form)
     {
         public int GoalDifference => GoalsFor - GoalsAgainst;
@@ -121,7 +128,10 @@ else
     protected override async Task LoadDataAsync()
     {
         _table = await TabellenService.GetTabelle(Season);
-        _games = await GameService.GetSeasonGamesAsync(Season);
+        var allGames = await GameService.GetSeasonGamesAsync(Season);
+        // Tabelle und Verlauf nur aus der Ligaphase, K.-o.-Spiele werden separat angezeigt
+        _games = Comp.IsCup ? allGames : allGames.Where(Comp.IsLeaguePhase).ToList();
+        _knockoutGames = Comp.HasKnockout ? allGames.Where(g => !Comp.IsLeaguePhase(g)).ToList() : [];
         BuildRows();
 
         _playedMatchDays = GameService.GetPlayedMatchDays(_games);
