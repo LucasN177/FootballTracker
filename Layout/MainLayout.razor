@@ -35,12 +35,12 @@
                 <img src="@AppStateService.SelectedCompetition.LogoUrl" alt="@AppStateService.SelectedCompetition.ShortName" />
                 @if (AppStateService.SelectedCompetition.LogoIsWordmark)
                 {
-                    <span class="ft-brand-logo-short">2.</span>
+                    <span class="ft-brand-logo-short">@AppStateService.SelectedCompetition.LogoShortText</span>
                 }
             </span>
             <MudHidden Breakpoint="Breakpoint.Xs">
                 <div class="d-flex flex-column">
-                    <span class="ft-brand-title">Bundesliga Tracker</span>
+                    <span class="ft-brand-title">Football Tracker</span>
                     <span class="ft-brand-subtitle">By Lucas Nagelsmann</span>
                 </div>
             </MudHidden>
@@ -164,7 +164,7 @@
         <MudSpacer />
         <div class="pa-4 text-center">
             <MudDivider Class="mb-3" />
-            <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">Bundesliga Tracker v0.3</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">Football Tracker v0.4</MudText>
             <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">Daten: OpenLigaDB • © 2026</MudText>
         </div>
     </MudDrawer>

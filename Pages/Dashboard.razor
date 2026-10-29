@@ -4,7 +4,7 @@
 @inject StatisticsService StatisticsService
 @inject TabellenService TabellenService
 
-<PageTitle>Dashboard • Bundesliga Tracker</PageTitle>
+<PageTitle>Dashboard • Football Tracker</PageTitle>
 
 <div class="ft-hero mb-5">
     <div class="ft-hero-content">
@@ -17,9 +17,9 @@
             }
             else if (_cupWinner != null)
             {
-                <span>@_cupWinner.Name hat den @Comp.Name gewonnen.</span>
+                <span>@_cupWinner.Name hat @(Comp.IsCup ? "den" : "die") @Comp.Name gewonnen.</span>
             }
-            else if (Comp.IsCup && _teamsRemaining > 0)
+            else if (InKnockoutPhase && _teamsRemaining > 0)
             {
                 <span>@Comp.RoundName(_currentMatchDay): noch @_teamsRemaining Teams im Wettbewerb.</span>
             }
@@ -38,17 +38,17 @@
 
 <MudGrid Spacing="3" Class="mb-2">
     <MudItem xs="6" md="3">
-        <StatCard Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Info" Label="@Comp.RoundLabel"
-                  Value="@(IsLoading ? "…" : Comp.IsCup ? Comp.RoundName(_currentMatchDay) : $"{_currentMatchDay} / {GameService.MatchDaysPerSeason}")"
+        <StatCard Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Info" Label="@(InKnockoutPhase ? "Runde" : Comp.RoundLabel)"
+                  Value="@(IsLoading ? "…" : InKnockoutPhase ? Comp.RoundName(_currentMatchDay) : $"{_currentMatchDay} / {GameService.MatchDaysPerSeason}")"
                   Hint="@(_liveGames > 0 ? $"{_liveGames} Spiele live" : null)" />
     </MudItem>
     <MudItem xs="6" md="3">
         <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Success" Label="Tore gesamt" Value="@(IsLoading ? "…" : _totalGoals.ToString())" Hint="@(IsLoading ? null : $"{_goalsPerGame:0.00} pro Spiel")" />
     </MudItem>
     <MudItem xs="6" md="3">
-        @if (Comp.IsCup)
+        @if (InKnockoutPhase || _cupWinner != null)
         {
-            <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Label="@(_cupWinner != null ? "Pokalsieger" : "Teams im Wettbewerb")"
+            <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Label="@(_cupWinner != null ? (Comp.IsCup ? "Pokalsieger" : "Sieger") : "Teams im Wettbewerb")"
                       Value="@(_cupWinner?.DisplayName ?? (IsLoading ? "…" : _teamsRemaining.ToString()))" />
         }
         else
@@ -98,6 +98,9 @@
 
     private Competition Comp => AppStateService.SelectedCompetition;
 
+    /// <summary>Pokal oder K.-o.-Phase der Champions League.</summary>
+    private bool InKnockoutPhase => Comp.IsCup || (Comp.HasKnockout && _currentMatchDay > Comp.TableRounds);
+
     protected override async Task LoadDataAsync()
     {
         _leader = null;
@@ -108,11 +111,11 @@
         _playedMatchDays = GameService.GetPlayedMatchDays(games);
         _liveGames = games.Count(g => g.IsLive);
 
-        if (Comp.IsCup)
+        if (Comp.HasKnockout)
         {
             // Teams der aktuellen Runde sind noch im Wettbewerb
             var currentRound = games.Where(g => g.MatchDay == _currentMatchDay).ToList();
-            _teamsRemaining = currentRound.Count * 2;
+            _teamsRemaining = currentRound.SelectMany(g => new[] { g.Team1.Id, g.Team2.Id }).Distinct().Count();
             var final = games.FirstOrDefault(g => g.MatchDay == Comp.RoundCount && g.MatchIsFinished);
             if (final != null)
                 _cupWinner = final.GetOutcomeFor(final.Team1.Id) == 'S' ? final.Team1 : final.Team2;

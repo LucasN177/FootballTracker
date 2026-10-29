@@ -1,7 +1,7 @@
 {
-  "name": "Bundesliga Tracker",
-  "short_name": "BL Tracker",
-  "description": "Tabelle, Spieltage, Live Scores, Statistiken und Player Tracker für die Bundesliga.",
+  "name": "Football Tracker",
+  "short_name": "Football Tracker",
+  "description": "Tabellen, Spieltage, Live Scores, Statistiken und Player Tracker für Bundesliga, 2. Bundesliga, 3. Liga, DFB-Pokal und Champions League.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

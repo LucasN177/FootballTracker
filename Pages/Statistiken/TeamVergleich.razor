@@ -4,7 +4,7 @@
 @inject TabellenService TabellenService
 @inject IDialogService DialogService
 
-<PageTitle>Team-Vergleich • Bundesliga Tracker</PageTitle>
+<PageTitle>Team-Vergleich • Football Tracker</PageTitle>
 
 <PageHeader Title="Team-Vergleich" Subtitle="@($"Zwei Teams direkt gegenüberstellen • Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.CompareArrows" />
 
@@ -147,7 +147,7 @@
     protected override async Task LoadDataAsync()
     {
         _lineOptions.ChartPalette = AppStateService.SelectedCompetition.ChartColors;
-        _games = await GameService.GetSeasonGamesAsync(Season);
+        _games = (await GameService.GetSeasonGamesAsync(Season)).Where(AppStateService.SelectedCompetition.IsLeaguePhase).ToList();
         _table = await TabellenService.GetTabelle(Season);
         // Bei Saisonwechsel die bisherige Auswahl beibehalten, sofern beide Teams noch in der Liga sind
         var team1 = _table.FirstOrDefault(t => t.Id == _team1?.Id) ?? _table.ElementAtOrDefault(0);

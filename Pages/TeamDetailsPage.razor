@@ -6,7 +6,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 
-<PageTitle>@(_team?.Name ?? "Team") • Bundesliga Tracker</PageTitle>
+<PageTitle>@(_team?.Name ?? "Team") • Football Tracker</PageTitle>
 
 <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_team == null"
            EmptyTitle="Team nicht gefunden" EmptyText="@($"Das Team spielt in der Saison {AppStateService.SelectedSeason.Name} nicht im Wettbewerb {Comp.Name}.")">
@@ -181,7 +181,7 @@
                                 var outcome = game.GetOutcomeFor(team.Id);
                                 var opponent = game.GetOpponent(team.Id);
                                 <div class="@($"ft-fixture {(game == _nextGame ? "next" : "")}")" @onclick="() => GameDetailsDialog.Show(DialogService, game)">
-                                    <MudText Typo="Typo.caption" Class="mud-text-secondary ft-fixture-day">@(Comp.IsCup ? Comp.RoundShortName(game.MatchDay) : $"{game.MatchDay}.")</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary ft-fixture-day">@(Comp.IsLeaguePhase(game) ? $"{game.MatchDay}." : Comp.RoundShortName(game.MatchDay))</MudText>
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary ft-fixture-date">@game.GetFormattedDateTime("dd.MM.")</MudText>
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0 ft-fixture-venue">@(game.IsHomeTeam(team.Id) ? "H" : "A")</MudChip>
                                     <TeamLogo Url="@opponent.LogoUrl" Name="@opponent.Name" Size="22" />
@@ -289,21 +289,22 @@
         var players = await StatisticsService.GetPlayerStatsAsync(Season);
         _scorers = players.Where(p => p.Team?.Id == TeamId && p.GoalCount > 0).ToList();
 
-        _playedMatchDays = GameService.GetPlayedMatchDays(seasonGames);
+        var tableGames = seasonGames.Where(Comp.IsLeaguePhase).ToList();
+        _playedMatchDays = GameService.GetPlayedMatchDays(tableGames);
         _matchDayLabels = ChartHelper.MatchDayLabels(_playedMatchDays);
-        var leader = StatisticsService.BuildRecords(seasonGames).FirstOrDefault();
+        var leader = StatisticsService.BuildRecords(tableGames).FirstOrDefault();
         _pointsSeries = new List<ChartSeries>
         {
-            new() { Name = _team.DisplayName, Data = StatisticsService.GetPointsProgression(seasonGames, TeamId, _playedMatchDays) }
+            new() { Name = _team.DisplayName, Data = StatisticsService.GetPointsProgression(tableGames, TeamId, _playedMatchDays) }
         };
-        var positionHistory = StatisticsService.GetPositionHistory(seasonGames, _playedMatchDays);
+        var positionHistory = StatisticsService.GetPositionHistory(tableGames, _playedMatchDays);
         _teamCount = Math.Max(2, positionHistory.Count);
         _positionSeries = positionHistory.TryGetValue(TeamId, out var positions)
             ? [new PositionChart.PositionSeries(_team.DisplayName, positions)]
             : [];
 
         if (leader != null && leader.Team.Id != TeamId)
-            _pointsSeries.Add(new ChartSeries { Name = $"{leader.Team.DisplayName} (Tabellenführer)", Data = StatisticsService.GetPointsProgression(seasonGames, leader.Team.Id, _playedMatchDays) });
+            _pointsSeries.Add(new ChartSeries { Name = $"{leader.Team.DisplayName} (Tabellenführer)", Data = StatisticsService.GetPointsProgression(tableGames, leader.Team.Id, _playedMatchDays) });
     }
 
     private static string WdlWidth(int? value, int? total) =>

@@ -5,7 +5,7 @@
 @inject FavoritesService FavoritesService
 @inject IDialogService DialogService
 
-<PageTitle>@(_player?.Name ?? "Spieler") • Bundesliga Tracker</PageTitle>
+<PageTitle>@(_player?.Name ?? "Spieler") • Football Tracker</PageTitle>
 
 <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_player == null"
            EmptyIcon="@Icons.Material.Filled.PersonOff"
