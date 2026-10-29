@@ -32,11 +32,35 @@
 
         <MudSpacer />
 
+        <!-- Competition Selector -->
+        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true" Class="mr-1">
+            <ActivatorContent>
+                <MudHidden Breakpoint="Breakpoint.Xs">
+                    <MudButton Variant="Variant.Text" Color="Color.Inherit" EndIcon="@Icons.Material.Filled.ExpandMore" Class="ft-competition-button"
+                               StartIcon="@Icons.Material.Filled.EmojiEvents">
+                        @AppStateService.SelectedCompetition.ShortName
+                    </MudButton>
+                </MudHidden>
+                <MudHidden Breakpoint="Breakpoint.SmAndUp">
+                    <MudIconButton Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Inherit" />
+                </MudHidden>
+            </ActivatorContent>
+            <ChildContent>
+                <MudText Typo="Typo.overline" Class="px-4 pt-2 mud-text-secondary d-block">Wettbewerb</MudText>
+                @foreach (var competition in Competition.All)
+                {
+                    <MudMenuItem OnClick="@(() => AppStateService.SetCompetition(competition))"
+                                 Icon="@(competition == AppStateService.SelectedCompetition ? Icons.Material.Filled.Check : null)">
+                        @competition.Name
+                    </MudMenuItem>
+                }
+            </ChildContent>
+        </MudMenu>
+
         <!-- Season Selector -->
         <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true" Class="mr-1">
             <ActivatorContent>
-                <MudButton Variant="Variant.Text" Color="Color.Inherit" EndIcon="@Icons.Material.Filled.ExpandMore" Class="ft-season-button"
-                           StartIcon="@Icons.Material.Filled.CalendarMonth">
+                <MudButton Variant="Variant.Text" Color="Color.Inherit" EndIcon="@Icons.Material.Filled.ExpandMore" Class="ft-season-button">
                     @AppStateService.SelectedSeason.Name
                 </MudButton>
             </ActivatorContent>
@@ -106,8 +130,8 @@
                     <span class="ft-live-dot ml-2"></span>
                 </div>
             </MudNavLink>
-            <MudNavLink Href="Tabelle" Icon="@Icons.Material.Filled.TableChart">Tabelle</MudNavLink>
-            <MudNavLink Href="Spieltage" Icon="@Icons.Material.Filled.CalendarMonth">Spieltage</MudNavLink>
+            <MudNavLink Href="Tabelle" Icon="@(AppStateService.SelectedCompetition.IsCup ? Icons.Material.Filled.AccountTree : Icons.Material.Filled.TableChart)">@(AppStateService.SelectedCompetition.IsCup ? "Turnierverlauf" : "Tabelle")</MudNavLink>
+            <MudNavLink Href="Spieltage" Icon="@Icons.Material.Filled.CalendarMonth">@(AppStateService.SelectedCompetition.IsCup ? "Runden" : "Spieltage")</MudNavLink>
             <MudNavLink Href="Teams" Icon="@Icons.Material.Filled.Groups">Teams</MudNavLink>
             <MudNavLink Href="GoalGetters" Icon="@Icons.Material.Filled.SportsSoccer">Torschützen</MudNavLink>
 

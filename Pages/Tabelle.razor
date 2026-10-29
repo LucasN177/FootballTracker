@@ -5,9 +5,19 @@
 @inject FavoritesService FavoritesService
 @inject NavigationManager NavigationManager
 
-<PageTitle>Tabelle • Bundesliga Tracker</PageTitle>
+<PageTitle>@(Comp.IsCup ? "Turnierverlauf" : "Tabelle") • Bundesliga Tracker</PageTitle>
 
-<PageHeader Title="Tabelle" Subtitle="@($"1. Bundesliga • Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.TableChart">
+@if (Comp.IsCup)
+{
+    <PageHeader Title="Turnierverlauf" Subtitle="@($"{Comp.Name} • Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.EmojiEvents" />
+
+    <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync">
+        <CupRounds Games="_games" Competition="Comp" HighlightTeamIds="_favoriteTeamIds" />
+    </DataState>
+}
+else
+{
+<PageHeader Title="Tabelle" Subtitle="@($"{Comp.Name} • Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.TableChart">
     <Actions>
         <MudToggleGroup T="string" Value="_view" ValueChanged="ChangeView" Color="Color.Primary" Size="Size.Small" Outlined="true" Delimiters="true">
             <MudToggleItem Value="@("gesamt")" Text="Gesamt" />
@@ -36,7 +46,7 @@
                 <MudTh Style="width: 48px"></MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd><span class="@($"ft-pos ft-pos-{TablePositions.GetZone(context.Position, _rows.Count)}")">@context.Position</span></MudTd>
+                <MudTd><span class="@($"ft-pos ft-pos-{TablePositions.GetZone(AppStateService.SelectedCompetition, context.Position, _rows.Count)}")">@context.Position</span></MudTd>
                 <MudTd>
                     <div class="d-flex align-center gap-2">
                         <TeamLogo Url="@context.Team.LogoUrl" Name="@context.Team.Name" Size="26" />
@@ -59,7 +69,7 @@
 </MudPaper>
 
 <div class="d-flex flex-wrap gap-4 mt-3 px-1">
-    @foreach (var (zone, label) in TablePositions.Legend)
+    @foreach (var (zone, label) in TablePositions.Legend(AppStateService.SelectedCompetition))
     {
         <div class="d-flex align-center gap-2">
             <span class="@($"ft-legend ft-pos-{zone}")"></span>
@@ -85,12 +95,15 @@
                 }
             </MudSelect>
         </div>
-        <PositionChart Series="_progressionSeries" MatchDays="_playedMatchDays" TeamCount="_table.Count" />
+        <PositionChart Series="_progressionSeries" MatchDays="_playedMatchDays" TeamCount="_table.Count" Competition="Comp" />
     </MudPaper>
+}
 }
 
 @code {
     private const int MaxProgressionTeams = 6;
+    private Competition Comp => AppStateService.SelectedCompetition;
+    private int[] _favoriteTeamIds = [];
     private record TableRow(int Position, Team Team, int Played, int Won, int Draw, int Lost, int GoalsFor, int GoalsAgainst, int Points, string Form)
     {
         public int GoalDifference => GoalsFor - GoalsAgainst;
@@ -107,7 +120,7 @@
 
     protected override async Task LoadDataAsync()
     {
-        _table = await TabellenService.GetBundesligaTabelle(Season);
+        _table = await TabellenService.GetTabelle(Season);
         _games = await GameService.GetSeasonGamesAsync(Season);
         BuildRows();
 
@@ -116,6 +129,7 @@
 
         // Vorauswahl: Lieblingsteams, sonst die Top 4
         await FavoritesService.EnsureLoadedAsync();
+        _favoriteTeamIds = FavoritesService.Teams.Select(f => f.TeamId).ToArray();
         var tableIds = _table.Select(t => t.Id).ToHashSet();
         var favorites = FavoritesService.Teams.Select(f => f.TeamId).Where(tableIds.Contains).Take(MaxProgressionTeams).ToList();
         OnProgressionTeamsChanged(favorites.Any() ? favorites : _table.Take(4).Select(t => t.Id));

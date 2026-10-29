@@ -3,7 +3,7 @@ using FootballTracker.Core.Models;
 
 namespace FootballTracker.Services;
 
-public class TeamService(IOpenLigaDataRepository openLigaDataRepository, TabellenService tabellenService)
+public class TeamService(IOpenLigaDataRepository openLigaDataRepository, TabellenService tabellenService, AppStateService appStateService)
 {
     /// <summary>
     /// Liefert ein Team der Saison inkl. Tabellenwerten. Teams, die (noch) nicht in der Tabelle stehen,
@@ -11,12 +11,12 @@ public class TeamService(IOpenLigaDataRepository openLigaDataRepository, Tabelle
     /// </summary>
     public async Task<Team?> GetTeamAsync(int season, int teamId)
     {
-        var table = await tabellenService.GetBundesligaTabelle(season);
+        var table = await tabellenService.GetTabelle(season);
         var team = table.FirstOrDefault(t => t.Id == teamId);
         if (team != null)
             return team;
 
-        var teams = await GetAllTeams(AppStateService.LeagueShortcut, season);
+        var teams = await GetAllTeams(appStateService.League, season);
         return teams.FirstOrDefault(t => t.Id == teamId);
     }
 

@@ -8,12 +8,20 @@
 
 <div class="ft-hero mb-5">
     <div class="ft-hero-content">
-        <MudText Typo="Typo.overline" Class="ft-hero-overline">1. Fußball-Bundesliga</MudText>
+        <MudText Typo="Typo.overline" Class="ft-hero-overline">@Comp.Name</MudText>
         <MudText Typo="Typo.h3" Class="ft-hero-title">Saison @AppStateService.SelectedSeason.Name</MudText>
         <MudText Typo="Typo.body1" Class="ft-hero-text">
             @if (IsLoading)
             {
                 <span>Daten werden geladen...</span>
+            }
+            else if (_cupWinner != null)
+            {
+                <span>@_cupWinner.Name hat den @Comp.Name gewonnen.</span>
+            }
+            else if (Comp.IsCup && _teamsRemaining > 0)
+            {
+                <span>@Comp.RoundName(_currentMatchDay): noch @_teamsRemaining Teams im Wettbewerb.</span>
             }
             else if (_leader != null)
             {
@@ -30,13 +38,23 @@
 
 <MudGrid Spacing="3" Class="mb-2">
     <MudItem xs="6" md="3">
-        <StatCard Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Info" Label="Spieltag" Value="@(IsLoading ? "…" : $"{_currentMatchDay} / {GameService.MatchDaysPerSeason}")" Hint="@(_liveGames > 0 ? $"{_liveGames} Spiele live" : null)" />
+        <StatCard Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Info" Label="@Comp.RoundLabel"
+                  Value="@(IsLoading ? "…" : Comp.IsCup ? Comp.RoundName(_currentMatchDay) : $"{_currentMatchDay} / {GameService.MatchDaysPerSeason}")"
+                  Hint="@(_liveGames > 0 ? $"{_liveGames} Spiele live" : null)" />
     </MudItem>
     <MudItem xs="6" md="3">
         <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Success" Label="Tore gesamt" Value="@(IsLoading ? "…" : _totalGoals.ToString())" Hint="@(IsLoading ? null : $"{_goalsPerGame:0.00} pro Spiel")" />
     </MudItem>
     <MudItem xs="6" md="3">
-        <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Label="Tabellenführer" Value="@(_leader?.DisplayName ?? "–")" Hint="@(_leader != null ? $"{_leader.Punkte} Punkte" : null)" />
+        @if (Comp.IsCup)
+        {
+            <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Label="@(_cupWinner != null ? "Pokalsieger" : "Teams im Wettbewerb")"
+                      Value="@(_cupWinner?.DisplayName ?? (IsLoading ? "…" : _teamsRemaining.ToString()))" />
+        }
+        else
+        {
+            <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Label="Tabellenführer" Value="@(_leader?.DisplayName ?? "–")" Hint="@(_leader != null ? $"{_leader.Punkte} Punkte" : null)" />
+        }
     </MudItem>
     <MudItem xs="6" md="3">
         <StatCard Icon="@Icons.Material.Filled.Whatshot" Color="Color.Primary" Label="Top-Torschütze" Value="@(_topScorer?.Name ?? "–")" Hint="@(_topScorer != null ? $"{_topScorer.GoalCount} Tore" : null)" />
@@ -54,8 +72,15 @@
     </MudItem>
     <MudItem xs="12" lg="5">
         <MudStack Spacing="3">
-            <TableComponent Count="8" />
-            <GamesChart />
+            @if (Comp.IsCup)
+            {
+                <TopScorersCard />
+            }
+            else
+            {
+                <TableComponent Count="8" />
+                <GamesChart />
+            }
         </MudStack>
     </MudItem>
 </MudGrid>
@@ -68,21 +93,36 @@
     private double _goalsPerGame;
     private Team? _leader;
     private PlayerSeasonStats? _topScorer;
+    private Team? _cupWinner;
+    private int _teamsRemaining;
+
+    private Competition Comp => AppStateService.SelectedCompetition;
 
     protected override async Task LoadDataAsync()
     {
         _leader = null;
         _topScorer = null;
+        _cupWinner = null;
         var games = await GameService.GetSeasonGamesAsync(Season);
         _currentMatchDay = await GameService.GetCurrentMatchDay(Season);
         _playedMatchDays = GameService.GetPlayedMatchDays(games);
         _liveGames = games.Count(g => g.IsLive);
 
-        var finished = games.Where(g => g.MatchIsFinished && g.FinalResult != null).ToList();
-        _totalGoals = finished.Sum(g => g.FinalResult!.PointsTeam1 + g.FinalResult.PointsTeam2);
+        if (Comp.IsCup)
+        {
+            // Teams der aktuellen Runde sind noch im Wettbewerb
+            var currentRound = games.Where(g => g.MatchDay == _currentMatchDay).ToList();
+            _teamsRemaining = currentRound.Count * 2;
+            var final = games.FirstOrDefault(g => g.MatchDay == Comp.RoundCount && g.MatchIsFinished);
+            if (final != null)
+                _cupWinner = final.GetOutcomeFor(final.Team1.Id) == 'S' ? final.Team1 : final.Team2;
+        }
+
+        var finished = games.Where(g => g.MatchIsFinished && g.RegulationResult != null).ToList();
+        _totalGoals = finished.Sum(g => g.RegulationResult!.PointsTeam1 + g.RegulationResult.PointsTeam2);
         _goalsPerGame = finished.Count == 0 ? 0 : (double)_totalGoals / finished.Count;
 
-        var table = await TabellenService.GetBundesligaTabelle(Season);
+        var table = await TabellenService.GetTabelle(Season);
         _leader = table.FirstOrDefault(t => t.Spiele > 0);
         _topScorer = (await StatisticsService.GetPlayerStatsAsync(Season)).FirstOrDefault();
     }

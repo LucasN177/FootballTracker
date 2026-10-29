@@ -8,18 +8,19 @@ namespace FootballTracker.Services;
 /// Leitet Spieler- und Teamstatistiken aus den Spieldaten einer Saison ab.
 /// OpenLigaDB liefert keine Kaderdaten, daher wird die Teamzugehörigkeit eines Spielers über seine Tore ermittelt.
 /// </summary>
-public class StatisticsService(GameService gameService)
+public class StatisticsService(GameService gameService, AppStateService appStateService)
 {
-    private readonly Dictionary<int, (int Version, List<PlayerSeasonStats> Stats)> _playerCache = new();
+    private readonly Dictionary<(string League, int Season), (int Version, List<PlayerSeasonStats> Stats)> _playerCache = new();
 
     public async Task<List<PlayerSeasonStats>> GetPlayerStatsAsync(int season)
     {
         var games = await gameService.GetSeasonGamesAsync(season);
-        if (_playerCache.TryGetValue(season, out var cached) && cached.Version == gameService.Version)
+        var key = (appStateService.League, season);
+        if (_playerCache.TryGetValue(key, out var cached) && cached.Version == gameService.Version)
             return cached.Stats;
 
         var stats = BuildPlayerStats(games);
-        _playerCache[season] = (gameService.Version, stats);
+        _playerCache[key] = (gameService.Version, stats);
         return stats;
     }
 
@@ -35,7 +36,7 @@ public class StatisticsService(GameService gameService)
         foreach (var game in games)
         {
             int previous1 = 0, previous2 = 0;
-            foreach (var goal in game.Goals)
+            foreach (var goal in game.RegularGoals)
             {
                 Team? scoringTeam = null;
                 if (goal.ScoreTeam1 > previous1)

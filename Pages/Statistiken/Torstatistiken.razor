@@ -28,7 +28,7 @@
     <MudGrid Spacing="3">
         <MudItem xs="12" lg="8">
             <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
-                <MudText Typo="Typo.h6">Tore pro Spieltag</MudText>
+                <MudText Typo="Typo.h6">Tore pro @AppStateService.SelectedCompetition.RoundLabel</MudText>
                 <MudChart ChartType="ChartType.Bar" ChartSeries="@_perMatchDay" XAxisLabels="@_matchDayLabels" Width="100%" Height="300px" ChartOptions="@_barOptions" />
             </MudPaper>
         </MudItem>
@@ -141,13 +141,13 @@
         _scorerCount = events.Where(e => !e.Goal.IsOwnGoal && e.Goal.GoalGetterId > 0).Select(e => e.Goal.GoalGetterId).Distinct().Count();
         _outcomes =
         [
-            _finished.Count(g => g.FinalResult!.PointsTeam1 > g.FinalResult.PointsTeam2),
-            _finished.Count(g => g.FinalResult!.PointsTeam1 == g.FinalResult.PointsTeam2),
-            _finished.Count(g => g.FinalResult!.PointsTeam1 < g.FinalResult.PointsTeam2)
+            _finished.Count(g => g.GetOutcomeFor(g.Team1.Id) == 'S'),
+            _finished.Count(g => g.GetOutcomeFor(g.Team1.Id) == 'U'),
+            _finished.Count(g => g.GetOutcomeFor(g.Team1.Id) == 'N')
         ];
 
         var matchDays = GameService.GetPlayedMatchDays(_finished);
-        _matchDayLabels = ChartHelper.MatchDayLabels(matchDays);
+        _matchDayLabels = ChartHelper.RoundLabels(AppStateService.SelectedCompetition, matchDays);
         var perDay = new double[matchDays];
         foreach (var game in _finished.Where(g => g.MatchDay >= 1 && g.MatchDay <= matchDays))
             perDay[game.MatchDay - 1] += TotalGoals(game);
@@ -156,7 +156,7 @@
 
         _highestScoring = _finished.OrderByDescending(TotalGoals).ThenByDescending(g => g.MatchDateTimeUtc).Take(5).ToList();
         _biggestWins = _finished
-            .OrderByDescending(g => Math.Abs(g.FinalResult!.PointsTeam1 - g.FinalResult.PointsTeam2))
+            .OrderByDescending(g => Math.Abs(g.RegulationResult!.PointsTeam1 - g.RegulationResult.PointsTeam2))
             .ThenByDescending(TotalGoals)
             .Take(5)
             .ToList();
@@ -180,5 +180,5 @@
 
     private void OpenTeam(TeamRecord record) => NavigationManager.NavigateTo($"TeamDetailsPage/{record.Team.Id}");
 
-    private static int TotalGoals(Game game) => game.FinalResult is { } r ? r.PointsTeam1 + r.PointsTeam2 : 0;
+    private static int TotalGoals(Game game) => game.RegulationResult is { } r ? r.PointsTeam1 + r.PointsTeam2 : 0;
 }

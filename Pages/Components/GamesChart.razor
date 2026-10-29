@@ -97,7 +97,7 @@
 
     protected override async Task LoadDataAsync()
     {
-        _teams = await TabellenService.GetBundesligaTabelle(Season);
+        _teams = await TabellenService.GetTabelle(Season);
         await FavoritesService.EnsureLoadedAsync();
 
         // Bevorzugt das erste Lieblingsteam anzeigen

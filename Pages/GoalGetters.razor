@@ -99,7 +99,7 @@
 
     protected override async Task LoadDataAsync()
     {
-        _players = await TabellenService.GetGoalGetters(AppStateService.LeagueShortcut, Season);
+        _players = await TabellenService.GetGoalGetters(AppStateService.League, Season);
     }
 
     private void OpenPlayer(GoalGetter player) => NavigationManager.NavigateTo($"spieler/{player.Id}");

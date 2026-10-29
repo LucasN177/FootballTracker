@@ -12,7 +12,7 @@ else
         {
             @for (var position = 1; position <= TeamCount; position++)
             {
-                var zone = TablePositions.GetZone(position, TeamCount);
+                var zone = TablePositions.GetZone(Competition, position, TeamCount);
                 if (zone != "none")
                 {
                     <rect x="@Num(PadLeft)" y="@Num(Y(position) - RowHeight / 2)" width="@Num(PlotWidth)" height="@Num(RowHeight)" class="@($"ft-zone ft-zone-{zone}")" />
@@ -78,6 +78,7 @@ else
     [Parameter] public int MatchDays { get; set; }
     [Parameter] public int TeamCount { get; set; } = 18;
     [Parameter] public bool ShowZones { get; set; } = true;
+    [Parameter] public Competition Competition { get; set; } = Competition.Bundesliga;
     [Parameter] public double Height { get; set; } = 380;
     [Parameter] public string EmptyText { get; set; } = "Noch keine Spiele absolviert.";
 

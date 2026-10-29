@@ -189,7 +189,7 @@
         await FavoritesService.EnsureLoadedAsync();
         var games = await GameService.GetSeasonGamesAsync(Season);
         _playedMatchDays = GameService.GetPlayedMatchDays(games);
-        _labels = ChartHelper.MatchDayLabels(_playedMatchDays);
+        _labels = ChartHelper.RoundLabels(AppStateService.SelectedCompetition, _playedMatchDays);
         _allPlayers = await StatisticsService.GetPlayerStatsAsync(Season);
         BuildTracked();
     }

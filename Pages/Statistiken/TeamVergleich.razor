@@ -8,6 +8,7 @@
 
 <PageHeader Title="Team-Vergleich" Subtitle="@($"Zwei Teams direkt gegenüberstellen • Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.CompareArrows" />
 
+<LeagueOnly>
 <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_table.Count < 2" EmptyTitle="Nicht genügend Teams verfügbar">
     <MudPaper Class="ft-card pa-4 mb-4" Elevation="0" Outlined="true">
         <MudGrid Spacing="2" Class="align-center">
@@ -125,6 +126,7 @@
         </MudGrid>
     }
 </DataState>
+</LeagueOnly>
 
 @code {
     private record CompareRow(string Label, string Display1, string Display2, double Share1, double Share2, int Better);
@@ -145,7 +147,7 @@
     protected override async Task LoadDataAsync()
     {
         _games = await GameService.GetSeasonGamesAsync(Season);
-        _table = await TabellenService.GetBundesligaTabelle(Season);
+        _table = await TabellenService.GetTabelle(Season);
         // Bei Saisonwechsel die bisherige Auswahl beibehalten, sofern beide Teams noch in der Liga sind
         var team1 = _table.FirstOrDefault(t => t.Id == _team1?.Id) ?? _table.ElementAtOrDefault(0);
         var team2 = _table.FirstOrDefault(t => t.Id == _team2?.Id) ?? _table.ElementAtOrDefault(1);

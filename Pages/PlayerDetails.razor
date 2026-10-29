@@ -170,7 +170,7 @@
 
         var games = await GameService.GetSeasonGamesAsync(Season);
         var playedMatchDays = Math.Max(1, GameService.GetPlayedMatchDays(games));
-        _labels = ChartHelper.MatchDayLabels(playedMatchDays);
+        _labels = ChartHelper.RoundLabels(AppStateService.SelectedCompetition, playedMatchDays);
         _goals = _player.Events.OrderByDescending(e => e.Game.MatchDateTimeUtc).ThenByDescending(e => e.Goal.MatchMinute).ToList();
 
         _teamGoals = _player.Team == null

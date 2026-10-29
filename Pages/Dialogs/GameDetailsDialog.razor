@@ -2,7 +2,7 @@
     <TitleContent>
         <div class="ft-match-hero">
             <MudText Typo="Typo.caption" Class="ft-match-hero-meta">
-                @(Game.MatchDay > 0 ? $"{Game.MatchDay}. Spieltag • " : "")@Game.GetFormattedDateTime("dddd, dd.MM.yyyy • HH:mm")
+                @(string.IsNullOrEmpty(Game.Group?.GroupName) ? "" : $"{Game.Group.GroupName} • ")@Game.GetFormattedDateTime("dddd, dd.MM.yyyy • HH:mm")
             </MudText>
             <div class="ft-match-hero-teams">
                 <a href="@($"TeamDetailsPage/{Game.Team1.Id}")" class="ft-match-hero-team" @onclick="Close">
@@ -19,6 +19,10 @@
                         <MudText Typo="Typo.caption" Class="ft-match-hero-meta">
                             Halbzeit @Game.HalfTimeResult.PointsTeam1:@Game.HalfTimeResult.PointsTeam2
                         </MudText>
+                    }
+                    @if (Game.GetPenaltyShootoutDisplay() is { } penalties)
+                    {
+                        <MudText Typo="Typo.caption" Class="ft-match-hero-meta">Elfmeterschießen @penalties</MudText>
                     }
                 </div>
                 <a href="@($"TeamDetailsPage/{Game.Team2.Id}")" class="ft-match-hero-team" @onclick="Close">

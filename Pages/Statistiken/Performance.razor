@@ -9,6 +9,7 @@
 
 <PageHeader Title="Performance" Subtitle="@($"Formkurven und Punkteverläufe der Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.TrendingUp" />
 
+<LeagueOnly>
 <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_playedMatchDays == 0" EmptyTitle="Noch keine Spiele absolviert">
     <MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true">
         <div class="d-flex align-center flex-wrap gap-3 mb-2">
@@ -86,6 +87,7 @@
         </MudTable>
     </MudPaper>
 </DataState>
+</LeagueOnly>
 
 @code {
     private record FormRow(int Position, TeamRecord Record, string Form, int TablePosition);
@@ -109,7 +111,7 @@
     protected override async Task LoadDataAsync()
     {
         _games = await GameService.GetSeasonGamesAsync(Season);
-        _table = await TabellenService.GetBundesligaTabelle(Season);
+        _table = await TabellenService.GetTabelle(Season);
         _playedMatchDays = GameService.GetPlayedMatchDays(_games);
         _labels = ChartHelper.MatchDayLabels(_playedMatchDays);
 

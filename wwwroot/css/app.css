@@ -1019,3 +1019,30 @@ h1:focus {
 .ft-zone-ecl { fill: var(--ft-ecl); }
 .ft-zone-rel { fill: var(--ft-rel); opacity: 0.2; }
 .ft-zone-down { fill: var(--ft-down); }
+
+/* Zonen 2. Bundesliga */
+.ft-pos-up { background: var(--ft-ecl); color: white; }
+.ft-pos-relup { background: #66bb6a; color: white; }
+.ft-zone-up { fill: var(--ft-ecl); }
+.ft-zone-relup { fill: #66bb6a; }
+
+/* Pokal */
+.ft-cup-round-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 4px 16px;
+}
+
+.ft-cup-game {
+    min-width: 0;
+}
+
+.ft-competition-button {
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+}
+
+.ft-matchday {
+    padding: 0 8px;
+    white-space: nowrap;
+}

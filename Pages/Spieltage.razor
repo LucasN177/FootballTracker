@@ -6,13 +6,13 @@
 
 <PageTitle>Spieltage • Bundesliga Tracker</PageTitle>
 
-<PageHeader Title="Spieltage" Subtitle="@($"Saison {AppStateService.SelectedSeason.Name} • 1. Fußball-Bundesliga")" Icon="@Icons.Material.Filled.CalendarMonth">
+<PageHeader Title="@(Comp.IsCup ? "Runden" : "Spieltage")" Subtitle="@($"Saison {AppStateService.SelectedSeason.Name} • {Comp.Name}")" Icon="@Icons.Material.Filled.CalendarMonth">
     <Actions>
         <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" Color="Color.Primary" OnClick="Refresh" Disabled="IsLoading">
             Aktualisieren
         </MudButton>
         <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Today" Color="Color.Primary" OnClick="LoadCurrentMatchDay" Disabled="IsLoading">
-            Aktueller Spieltag
+            @(Comp.IsCup ? "Aktuelle Runde" : "Aktueller Spieltag")
         </MudButton>
     </Actions>
 </PageHeader>
@@ -25,7 +25,7 @@
             @foreach (var matchDay in Enumerable.Range(1, GameService.MatchDaysPerSeason))
             {
                 var day = matchDay;
-                <button class="@MatchDayClass(day)" @onclick="() => SelectMatchDay(day)" id="@($"md-{day}")">@day</button>
+                <button class="@MatchDayClass(day)" @onclick="() => SelectMatchDay(day)" id="@($"md-{day}")">@Comp.RoundShortName(day)</button>
             }
         </div>
         <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(_selectedMatchDay >= GameService.MatchDaysPerSeason || IsLoading)" OnClick="() => SelectMatchDay(_selectedMatchDay + 1)" />
@@ -34,7 +34,7 @@
 
 <MudGrid Spacing="3" Class="mb-4">
     <MudItem xs="6" md="3">
-        <StatCard Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Info" Value="@($"{_selectedMatchDay}.")" Label="Spieltag" Hint="@(_selectedMatchDay == _currentMatchDay ? "aktuell" : null)" />
+        <StatCard Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Info" Value="@(Comp.IsCup ? Comp.RoundName(_selectedMatchDay) : $"{_selectedMatchDay}.")" Label="@Comp.RoundLabel" Hint="@(_selectedMatchDay == _currentMatchDay ? "aktuell" : null)" />
     </MudItem>
     <MudItem xs="6" md="3">
         <StatCard Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Value="@_allGames.Count(g => g.MatchIsFinished).ToString()" Label="Beendete Spiele" />
@@ -43,7 +43,7 @@
         <StatCard Icon="@Icons.Material.Filled.Schedule" Color="Color.Warning" Value="@_allGames.Count(g => g.IsUpcoming).ToString()" Label="Anstehende Spiele" />
     </MudItem>
     <MudItem xs="6" md="3">
-        <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Primary" Value="@_allGames.Sum(g => g.Goals.Count).ToString()" Label="Tore am Spieltag" Hint="@(_allGames.Any(g => g.IsLive) ? $"{_allGames.Count(g => g.IsLive)} live" : null)" />
+        <StatCard Icon="@Icons.Material.Filled.SportsSoccer" Color="Color.Primary" Value="@_allGames.Sum(g => g.RegularGoals.Count()).ToString()" Label="@(Comp.IsCup ? "Tore in der Runde" : "Tore am Spieltag")" Hint="@(_allGames.Any(g => g.IsLive) ? $"{_allGames.Count(g => g.IsLive)} live" : null)" />
     </MudItem>
 </MudGrid>
 
@@ -104,6 +104,7 @@
 
 @code {
     private List<Game> _allGames = new();
+    private Competition Comp => AppStateService.SelectedCompetition;
     private int _selectedMatchDay = 1;
     private int _currentMatchDay = 1;
     private string _selectedFilter = "all";
