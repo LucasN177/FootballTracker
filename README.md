@@ -46,6 +46,9 @@ eigenes Farbschema und Logo.
   - Prognosen: Tipp, erwartete Tore und Sieg/Remis/Niederlage-Wahrscheinlichkeiten je Spiel, Teamstärken und
     eine Saisonbilanz des Modells (Tendenz, Sieger/Remis, exakte Treffer, Kicktipp-Punkte, Brier-Score).
     Tipp-Strategie wählbar: Kicktipp-optimal oder mit Remis-Tipps.
+    - Prognose im Detail (Klick auf eine Spielkarte): Teamstärken mit den zugrunde liegenden Spielen und ihrem Gewicht,
+      Rechnung der erwarteten Tore, Torverteilung, Ergebnis-Matrix mit Dixon-Coles-Korrektur, Sieg/Remis/Niederlage,
+      erwartete Kicktipp-Punkte möglicher Tipps und – nach Spielende – ein Rückblick
     - Saisonprognose: 10.000 simulierte Saisonverläufe ergeben die Chancen auf Meisterschaft, Europapokal,
       Aufstieg, Relegation und Abstieg (Champions League: Top 8, Playoffs, Aus)
     - Verlauf: Trefferquote je Spieltag und Bilanz des Modells in allen Saisons

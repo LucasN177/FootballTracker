@@ -61,6 +61,26 @@ public class MatchPrediction
     public bool IsExactHit(TipStrategy strategy) => ActualScore == GetTip(strategy);
     public int? GetKicktippPoints(TipStrategy strategy) => ActualScore is { } score ? GetKicktippPoints(GetTip(strategy), score) : null;
 
+    /// <summary>
+    /// Wahrscheinlichkeiten, mit einem Tipp 4 (exakt), 3 (Tordifferenz) oder 2 Punkte (nur Tendenz) zu holen,
+    /// und die daraus erwarteten Punkte.
+    /// </summary>
+    public (double Exact, double Difference, double Tendency, double Expected) GetPointsBreakdown((int Home, int Away) tip)
+    {
+        double exact = 0, difference = 0, tendency = 0;
+        for (var i = 0; i < ScoreProbabilities.GetLength(0); i++)
+            for (var j = 0; j < ScoreProbabilities.GetLength(1); j++)
+            {
+                switch (GetKicktippPoints(tip, (i, j)))
+                {
+                    case 4: exact += ScoreProbabilities[i, j]; break;
+                    case 3: difference += ScoreProbabilities[i, j]; break;
+                    case 2: tendency += ScoreProbabilities[i, j]; break;
+                }
+            }
+        return (exact, difference, tendency, 4 * exact + 3 * difference + 2 * tendency);
+    }
+
     /// <summary>Erwartete Kicktipp-Punkte eines Tipps über alle möglichen Ergebnisse.</summary>
     public double GetExpectedPoints((int Home, int Away) tip)
     {

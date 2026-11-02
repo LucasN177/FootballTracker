@@ -1,0 +1,466 @@
+@page "/statistiken/prognosen/spiel/{MatchId:int}"
+@inherits SeasonPageBase
+@inject PredictionService PredictionService
+@inject LocalStorageService LocalStorage
+@inject NavigationManager NavigationManager
+
+<PageTitle>Prognose im Detail • Football Tracker</PageTitle>
+
+<PageHeader Title="Prognose im Detail" Subtitle="Wie der Tipp Schritt für Schritt entsteht" Icon="@Icons.Material.Filled.Calculate">
+    <Actions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack" Href="statistiken/prognosen">
+            Zu den Prognosen
+        </MudButton>
+    </Actions>
+</PageHeader>
+
+<DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="_explanation == null"
+           EmptyIcon="@Icons.Material.Filled.Insights" EmptyTitle="Keine Prognose für dieses Spiel"
+           EmptyText="Das Spiel gehört nicht zur gewählten Saison und zum gewählten Wettbewerb, oder es lagen vorher zu wenige Ergebnisse vor.">
+    @if (_explanation is { } x)
+    {
+        var p = x.Prediction;
+        var game = p.Game;
+        var model = x.Model;
+        var home = model.GetRating(game.Team1.Id);
+        var away = model.GetRating(game.Team2.Id);
+        var tip = p.GetTip(_strategy);
+
+        @* Überblick *@
+        <MudPaper Class="ft-card pa-4 pa-md-6 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary d-block text-center mb-3">
+                @Comp.RoundName(game.MatchDay) • @game.GetFormattedDateTime("dddd, dd.MM.yyyy HH:mm") • Datenstand vor dem Spieltag
+            </MudText>
+            <div class="ft-prediction-match">
+                <div class="ft-prediction-team">
+                    <TeamLogo Url="@game.Team1.LogoUrl" Name="@game.Team1.Name" Size="56" />
+                    <a href="@($"TeamDetailsPage/{game.Team1.Id}")" class="ft-prediction-team-name">@game.Team1.Name</a>
+                </div>
+                <div class="ft-prediction-tip">
+                    <div class="ft-prediction-score ft-prediction-score-large">@tip.Home:@tip.Away</div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(_strategy == TipStrategy.WithDraws ? "Tipp (mit Remis-Tipps)" : "Tipp")</MudText>
+                    @if (p.ActualScore is { } actual)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="mt-2"
+                                 Color="@(p.IsTendencyHit(_strategy) ? Color.Success : Color.Error)"
+                                 Icon="@(p.IsTendencyHit(_strategy) ? Icons.Material.Filled.Check : Icons.Material.Filled.Close)">
+                            Ergebnis @actual.Home:@actual.Away • @Points(p.GetKicktippPoints(_strategy) ?? 0)
+                        </MudChip>
+                    }
+                </div>
+                <div class="ft-prediction-team">
+                    <TeamLogo Url="@game.Team2.LogoUrl" Name="@game.Team2.Name" Size="56" />
+                    <a href="@($"TeamDetailsPage/{game.Team2.Id}")" class="ft-prediction-team-name">@game.Team2.Name</a>
+                </div>
+            </div>
+            <div class="ft-detail-steps mt-4">
+                @foreach (var (number, title) in StepTitles)
+                {
+                    <a class="ft-detail-step-link" href="@($"statistiken/prognosen/spiel/{MatchId}#schritt-{number}")" @onclick:preventDefault @onclick="() => ScrollTo(number)">
+                        <span class="ft-step-badge">@number</span> @title
+                    </a>
+                }
+            </div>
+        </MudPaper>
+
+        @* 1. Teamstärken *@
+        <MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true" id="schritt-1">
+            <StepTitle Number="1" Title="@StepTitles[0].Title">
+                Das Modell gibt jedem Team einen Angriffs- und einen Abwehrwert. Sie werden so geschätzt, dass sie alle bisherigen
+                Ergebnisse möglichst gut erklären – ein 3:0 gegen eine starke Abwehr zählt also mehr als gegen eine schwache.
+                Neuere Spiele zählen stärker: Nach @((int)PredictionModel.HalfLifeDays) Tagen hat ein Spiel nur noch halbes Gewicht.
+            </StepTitle>
+            <MudGrid Spacing="3">
+                @foreach (var (team, rating, games) in new[] { (game.Team1, home, x.HomeGames), (game.Team2, away, x.AwayGames) })
+                {
+                    <MudItem xs="12" lg="6">
+                        <div class="d-flex align-center gap-2 mb-2">
+                            <TeamLogo Url="@team.LogoUrl" Name="@team.Name" Size="24" />
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@team.DisplayName</MudText>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <div class="ft-factor">
+                                <span class="ft-factor-label">Angriff</span>
+                                <span class="@($"ft-factor-value {DeltaClass(Math.Exp(rating.Attack) - 1)}")">×@Math.Exp(rating.Attack).ToString("0.00")</span>
+                                <span class="ft-factor-hint">@Delta(Math.Exp(rating.Attack)) Tore</span>
+                            </div>
+                            <div class="ft-factor">
+                                <span class="ft-factor-label">Abwehr</span>
+                                <span class="@($"ft-factor-value {DeltaClass(1 - Math.Exp(rating.Defense))}")">×@Math.Exp(rating.Defense).ToString("0.00")</span>
+                                <span class="ft-factor-hint">@Delta(Math.Exp(rating.Defense)) Gegentore</span>
+                            </div>
+                        </div>
+                        @if (model.IsNewTeam(team.Id))
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Text" Class="mb-2">
+                                Neu in der Liga: Das Modell startet mit etwa 20 % weniger Toren und 20 % mehr Gegentoren als der Schnitt und passt die Werte mit jedem Spiel an.
+                            </MudAlert>
+                        }
+                        <MudSimpleTable Dense="true" Elevation="0" Class="ft-table ft-detail-table">
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Gegner</th>
+                                    <th class="text-center">Erg.</th>
+                                    <th class="text-center" title="Erwartete Tordifferenz des Gegners gegen ein Durchschnittsteam">Gegner</th>
+                                    <th class="text-right" title="Gewicht des Spiels in der Schätzung">Gewicht</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var (g, weight) in games.Take(GamesShown))
+                                {
+                                    var isHome = g.Team1.Id == team.Id;
+                                    var opponent = isHome ? g.Team2 : g.Team1;
+                                    var own = isHome ? g.FinalResult!.PointsTeam1 : g.FinalResult!.PointsTeam2;
+                                    var other = isHome ? g.FinalResult!.PointsTeam2 : g.FinalResult!.PointsTeam1;
+                                    <tr>
+                                        <td class="ft-nowrap">@g.MatchDateTime.ToString("dd.MM.yy")</td>
+                                        <td>
+                                            <div class="d-flex align-center gap-1" style="min-width: 0">
+                                                <span class="mud-text-secondary">@(isHome ? "H" : "A")</span>
+                                                <TeamLogo Url="@opponent.LogoUrl" Name="@opponent.Name" Size="18" />
+                                                <span class="ft-ellipsis">@opponent.DisplayName</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center"><span class="@($"ft-form-chip ft-form-{(own > other ? "win" : own == other ? "draw" : "loss")} ft-result-chip-small")">@own:@other</span></td>
+                                        <td class="text-center">@Strength(model, opponent.Id).ToString("+0.0;-0.0;0.0")</td>
+                                        <td class="text-right">
+                                            <div class="ft-weight"><div style="@($"width:{weight * 100:0}%")"></div></div>
+                                            @((weight * 100).ToString("0")) %
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-1">
+                            @(games.Count > GamesShown ? $"Die {GamesShown} neuesten von {games.Count} Spielen" : $"{games.Count} Spiele") aus dieser und der Vorsaison.
+                        </MudText>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudPaper>
+
+        @* 2. Erwartete Tore *@
+        <MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true" id="schritt-2">
+            <StepTitle Number="2" Title="@StepTitles[1].Title">
+                Die Werte werden mit dem Grundniveau der Liga multipliziert. Das Heimteam bekommt zusätzlich den Heimvorteil,
+                der aus allen Spielen der Liga geschätzt wird. Für das Gastteam zählt die Abwehr des Heimteams und umgekehrt.
+            </StepTitle>
+            @foreach (var (label, factors, result) in new[]
+            {
+                (game.Team1.DisplayName, new[] { ("Ø-Team auswärts", model.BaseGoals), ("Heimvorteil", model.HomeFactor), ($"Angriff {game.Team1.DisplayName}", Math.Exp(home.Attack)), ($"Abwehr {game.Team2.DisplayName}", Math.Exp(away.Defense)) }, p.ExpectedGoalsHome),
+                (game.Team2.DisplayName, new[] { ("Ø-Team auswärts", model.BaseGoals), ($"Angriff {game.Team2.DisplayName}", Math.Exp(away.Attack)), ($"Abwehr {game.Team1.DisplayName}", Math.Exp(home.Defense)) }, p.ExpectedGoalsAway)
+            })
+            {
+                <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Erwartete Tore @label</MudText>
+                <div class="ft-formula mb-2">
+                    @for (var i = 0; i < factors.Length; i++)
+                    {
+                        if (i > 0)
+                        {
+                            <span class="ft-formula-op">×</span>
+                        }
+                        <span class="ft-formula-term">
+                            <span class="ft-formula-value">@factors[i].Item2.ToString("0.00")</span>
+                            <span class="ft-formula-label">@factors[i].Item1</span>
+                        </span>
+                    }
+                    <span class="ft-formula-op">=</span>
+                    <span class="ft-formula-term ft-formula-result">
+                        <span class="ft-formula-value">@result.ToString("0.00")</span>
+                        <span class="ft-formula-label">Tore</span>
+                    </span>
+                </div>
+            }
+        </MudPaper>
+
+        @* 3. Torverteilung *@
+        <MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true" id="schritt-3">
+            <StepTitle Number="3" Title="@StepTitles[2].Title">
+                Aus den erwarteten Toren ergibt die Poisson-Verteilung, wie wahrscheinlich 0, 1, 2, … Tore für jedes Team sind.
+                Auch bei 2,0 erwarteten Toren sind 1 oder 3 Tore kaum seltener als genau 2.
+            </StepTitle>
+            <MudGrid Spacing="3">
+                @foreach (var (team, lambda) in new[] { (game.Team1, p.ExpectedGoalsHome), (game.Team2, p.ExpectedGoalsAway) })
+                {
+                    var pmf = PredictionModel.PoissonPmf(lambda);
+                    var max = pmf.Max();
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">@team.DisplayName (@lambda.ToString("0.00") erwartet)</MudText>
+                        @for (var k = 0; k <= MatrixSize; k++)
+                        {
+                            var value = k < MatrixSize ? pmf[k] : pmf.Skip(MatrixSize).Sum();
+                            <div class="ft-pmf-row">
+                                <span class="ft-pmf-label">@(k < MatrixSize ? k.ToString() : $"{MatrixSize}+")</span>
+                                <div class="ft-pmf-bar"><div style="@($"width:{value / max * 100:0}%")"></div></div>
+                                <span class="ft-pmf-value">@Percent(value)</span>
+                            </div>
+                        }
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudPaper>
+
+        @* 4. Ergebnis-Matrix *@
+        <MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true" id="schritt-4">
+            <StepTitle Number="4" Title="@StepTitles[3].Title">
+                Die Wahrscheinlichkeit eines Ergebnisses ist das Produkt beider Torverteilungen. Reine Poisson-Modelle unterschätzen
+                knappe Spiele, deshalb korrigiert Dixon-Coles die Felder 0:0, 1:0, 0:1 und 1:1 mit dem Faktor ρ = @model.Rho.ToString("0.00").
+            </StepTitle>
+            <div class="ft-matrix-wrap">
+                <table class="ft-matrix">
+                    <thead>
+                        <tr>
+                            <th class="ft-matrix-corner">@game.Team1.DisplayName ↓ / @game.Team2.DisplayName →</th>
+                            @for (var j = 0; j < MatrixSize; j++)
+                            {
+                                <th>@j</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < MatrixSize; i++)
+                        {
+                            <tr>
+                                <th>@i</th>
+                                @for (var j = 0; j < MatrixSize; j++)
+                                {
+                                    var value = p.ScoreProbabilities[i, j];
+                                    <td class="@MatrixClass(p, tip, i, j)" style="@($"background: color-mix(in srgb, var(--ft-primary) {Math.Round(value / p.MostLikelyProbability * 55)}%, transparent)")"
+                                        title="@($"{i}:{j} – {value * 100:0.0} %")">
+                                        @((value * 100).ToString(value < 0.001 ? "0" : "0.0"))
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex flex-wrap gap-3 mt-2">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Angaben in Prozent</MudText>
+                <MudText Typo="Typo.caption"><span class="ft-matrix-key ft-matrix-tip"></span> Tipp</MudText>
+                @if (p.ActualScore != null)
+                {
+                    <MudText Typo="Typo.caption"><span class="ft-matrix-key ft-matrix-actual"></span> Ergebnis</MudText>
+                }
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Ergebnisse mit @MatrixSize oder mehr Toren eines Teams: @Percent(1 - SumMatrix(p))</MudText>
+            </div>
+
+            <MudText Typo="Typo.subtitle2" Class="mt-4 mb-1">Dixon-Coles-Korrektur</MudText>
+            <MudSimpleTable Dense="true" Elevation="0" Class="ft-table ft-detail-table" Style="max-width: 460px">
+                <thead>
+                    <tr>
+                        <th>Ergebnis</th>
+                        <th class="text-center">Nur Poisson</th>
+                        <th class="text-center">Mit Korrektur</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (i, j) in new[] { (0, 0), (1, 0), (0, 1), (1, 1) })
+                    {
+                        var raw = PredictionModel.PoissonPmf(p.ExpectedGoalsHome)[i] * PredictionModel.PoissonPmf(p.ExpectedGoalsAway)[j];
+                        var corrected = p.ScoreProbabilities[i, j];
+                        <tr>
+                            <td>@i:@j</td>
+                            <td class="text-center">@((raw * 100).ToString("0.0")) %</td>
+                            <td class="text-center font-weight-bold">
+                                @((corrected * 100).ToString("0.0")) %
+                                <span class="@(corrected >= raw ? "mud-success-text" : "mud-error-text")">(@((corrected - raw) * 100 >= 0 ? "+" : "")@(((corrected - raw) * 100).ToString("0.0")))</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        </MudPaper>
+
+        @* 5. Sieg, Remis, Niederlage *@
+        <MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true" id="schritt-5">
+            <StepTitle Number="5" Title="@StepTitles[4].Title">
+                Alle Felder unterhalb der Diagonale der Matrix sind Heimsiege, die Diagonale sind Remis, alles darüber Auswärtssiege.
+                Die Summen ergeben die drei Wahrscheinlichkeiten.
+            </StepTitle>
+            <div class="ft-wdl-bar ft-prediction-bar">
+                <div class="win" style="@($"width:{p.HomeWin * 100:0}%")"></div>
+                <div class="draw" style="@($"width:{p.Draw * 100:0}%")"></div>
+                <div class="loss" style="@($"width:{p.AwayWin * 100:0}%")"></div>
+            </div>
+            <div class="d-flex justify-space-between mt-2">
+                <div><MudText Typo="Typo.h6">@Percent(p.HomeWin)</MudText><MudText Typo="Typo.caption" Class="mud-text-secondary">Sieg @game.Team1.DisplayName</MudText></div>
+                <div class="text-center"><MudText Typo="Typo.h6">@Percent(p.Draw)</MudText><MudText Typo="Typo.caption" Class="mud-text-secondary">Remis</MudText></div>
+                <div class="text-right"><MudText Typo="Typo.h6">@Percent(p.AwayWin)</MudText><MudText Typo="Typo.caption" Class="mud-text-secondary">Sieg @game.Team2.DisplayName</MudText></div>
+            </div>
+        </MudPaper>
+
+        @* 6. Tipp *@
+        <MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true" id="schritt-6">
+            <StepTitle Number="6" Title="@StepTitles[5].Title">
+                Für jeden möglichen Tipp wird ausgerechnet, wie viele Kicktipp-Punkte er im Schnitt bringt: 4 Punkte mal die
+                Wahrscheinlichkeit für das exakte Ergebnis, 3 Punkte für die richtige Tordifferenz, 2 Punkte für die richtige Tendenz.
+                Weil ein Sieg-Tipp auch über die Tordifferenz punkten kann, ein Remis-Tipp aber nicht, liegt oft ein knapper Sieg vorne –
+                selbst wenn ein Remis das wahrscheinlichste Ergebnis ist.
+            </StepTitle>
+            <MudSimpleTable Dense="true" Elevation="0" Class="ft-table ft-detail-table">
+                <thead>
+                    <tr>
+                        <th>Tipp</th>
+                        <th class="text-center" title="Wahrscheinlichkeit für 4 Punkte">Exakt</th>
+                        <th class="text-center" title="Wahrscheinlichkeit für 3 Punkte">Tordiff.</th>
+                        <th class="text-center" title="Wahrscheinlichkeit für 2 Punkte">Tendenz</th>
+                        <th class="text-right">Ø Punkte</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var candidate in Candidates(p, tip))
+                    {
+                        var b = p.GetPointsBreakdown(candidate);
+                        <tr class="@(candidate == tip ? "ft-row-selected" : "")">
+                            <td class="ft-nowrap">
+                                <b>@candidate.Home:@candidate.Away</b>
+                                @if (candidate == p.Tip)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="my-0">Kicktipp-optimal</MudChip>
+                                }
+                                @if (candidate == p.DrawTip && p.IsBalanced)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text" Class="my-0">Remis-Tipp</MudChip>
+                                }
+                                @if (candidate == p.MostLikelyScore)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="my-0">wahrscheinlichstes Ergebnis</MudChip>
+                                }
+                            </td>
+                            <td class="text-center">@Percent(b.Exact)</td>
+                            <td class="text-center">@(candidate.Home == candidate.Away ? "–" : Percent(b.Difference))</td>
+                            <td class="text-center">@Percent(b.Tendency)</td>
+                            <td class="text-right font-weight-bold">@b.Expected.ToString("0.00")</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+            <MudAlert Severity="@(p.IsBalanced ? Severity.Warning : Severity.Normal)" Variant="Variant.Text" Dense="true" Class="mt-3">
+                Heim- und Auswärtssieg liegen @((Math.Abs(p.HomeWin - p.AwayWin) * 100).ToString("0")) Prozentpunkte auseinander.
+                @if (p.IsBalanced)
+                {
+                    @($"Das ist weniger als {MatchPrediction.DrawMargin * 100:0} – mit der Strategie „Mit Remis-Tipps“ wird hier {p.DrawTip.Home}:{p.DrawTip.Away} getippt.")
+                }
+                else
+                {
+                    @($"Das sind mindestens {MatchPrediction.DrawMargin * 100:0} – auch mit der Strategie „Mit Remis-Tipps“ bleibt es bei {p.Tip.Home}:{p.Tip.Away}.")
+                }
+            </MudAlert>
+        </MudPaper>
+
+        @* 7. Rückblick *@
+        @if (p.ActualScore is { } result)
+        {
+            <MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true" id="schritt-7">
+                <StepTitle Number="7" Title="Rückblick">
+                    Das Spiel endete @result.Home:@result.Away. Das Modell hatte diesem Ergebnis @Percent(p.ScoreProbabilities[Math.Min(result.Home, PredictionModel.MaxGoals), Math.Min(result.Away, PredictionModel.MaxGoals)])
+                    und dem Ausgang (@OutcomeName(p.ActualOutcome!.Value, game)) @Percent(p.GetProbability(p.ActualOutcome.Value)) gegeben.
+                </StepTitle>
+                <div class="d-flex flex-wrap gap-3">
+                    @foreach (var strategy in Enum.GetValues<TipStrategy>())
+                    {
+                        var strategyTip = p.GetTip(strategy);
+                        <div class="ft-factor">
+                            <span class="ft-factor-label">@(strategy == TipStrategy.KicktippOptimal ? "Kicktipp-optimal" : "Mit Remis-Tipps")</span>
+                            <span class="ft-factor-value">@strategyTip.Home:@strategyTip.Away</span>
+                            <span class="ft-factor-hint">@Points(p.GetKicktippPoints(strategy) ?? 0)</span>
+                        </div>
+                    }
+                </div>
+            </MudPaper>
+        }
+    }
+</DataState>
+
+@code {
+    private const int MatrixSize = 6;
+    private const int GamesShown = 8;
+    private const string StrategyKey = "ft.tipStrategy";
+
+    private static readonly (int Number, string Title)[] StepTitles =
+    [
+        (1, "Teamstärken"),
+        (2, "Erwartete Tore"),
+        (3, "Torverteilung"),
+        (4, "Wahrscheinlichkeit je Ergebnis"),
+        (5, "Sieg, Remis, Niederlage"),
+        (6, "Vom Ergebnis zum Tipp")
+    ];
+
+    [Parameter] public int MatchId { get; set; }
+    [Inject] private IJSRuntime JS { get; set; } = null!;
+
+    private Competition Comp => AppStateService.SelectedCompetition;
+    private MatchExplanation? _explanation;
+    private TipStrategy _strategy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Enum.TryParse<TipStrategy>(await LocalStorage.GetAsync(StrategyKey), out var strategy))
+            _strategy = strategy;
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_explanation != null && _explanation.Prediction.Game.MatchId != MatchId)
+            await ReloadAsync();
+    }
+
+    protected override async Task LoadDataAsync() =>
+        _explanation = Comp.IsCup ? null : await PredictionService.GetExplanationAsync(Season, MatchId);
+
+    private Task ScrollTo(int step) => JS.InvokeVoidAsync("ftScrollIntoView", $"schritt-{step}").AsTask();
+
+    /// <summary>
+    /// Kicktipp-optimaler Tipp, Remis-Tipp, wahrscheinlichstes Ergebnis und die übrigen besten Tipps.
+    /// Unwahrscheinliche Ergebnisse wie 5:4 bringen über die Tordifferenz rechnerisch oft ähnlich viele Punkte und werden ausgeblendet.
+    /// </summary>
+    private static IEnumerable<(int Home, int Away)> Candidates(MatchPrediction p, (int Home, int Away) tip)
+    {
+        var all = Enumerable.Range(0, MatrixSize).SelectMany(i => Enumerable.Range(0, MatrixSize).Select(j => (Home: i, Away: j)));
+        var best = all.Where(t => p.ScoreProbabilities[t.Home, t.Away] >= 0.02).OrderByDescending(t => p.GetExpectedPoints(t)).Take(5);
+        return new[] { tip, p.Tip, p.DrawTip, p.MostLikelyScore }
+            .Concat(best)
+            .Distinct()
+            .OrderByDescending(t => p.GetExpectedPoints(t));
+    }
+
+    private static string MatrixClass(MatchPrediction p, (int Home, int Away) tip, int i, int j)
+    {
+        var css = i == j ? "ft-matrix-diagonal" : "";
+        if ((i, j) == tip) css += " ft-matrix-tip";
+        if (p.ActualScore == (i, j)) css += " ft-matrix-actual";
+        return css;
+    }
+
+    private static double SumMatrix(MatchPrediction p)
+    {
+        double sum = 0;
+        for (var i = 0; i < MatrixSize; i++)
+            for (var j = 0; j < MatrixSize; j++)
+                sum += p.ScoreProbabilities[i, j];
+        return sum;
+    }
+
+    /// <summary>Erwartete Tordifferenz eines Teams gegen ein Durchschnittsteam auf neutralem Platz.</summary>
+    private static double Strength(PredictionModel model, int teamId)
+    {
+        var rating = model.GetRating(teamId);
+        return model.BaseGoals * (Math.Exp(rating.Attack) - Math.Exp(rating.Defense));
+    }
+
+    private static string OutcomeName(MatchOutcome outcome, Game game) => outcome switch
+    {
+        MatchOutcome.HomeWin => $"Sieg {game.Team1.DisplayName}",
+        MatchOutcome.AwayWin => $"Sieg {game.Team2.DisplayName}",
+        _ => "Remis"
+    };
+
+    private static string Percent(double value) => value < 0.005 && value > 0 ? "<1 %" : $"{value * 100:0} %";
+    private static string Points(int points) => points == 1 ? "1 Punkt" : $"{points} Punkte";
+    private static string Delta(double factor) => (factor - 1).ToString("+0 %;-0 %;±0 %");
+    private static string DeltaClass(double better) => better > 0.05 ? "mud-success-text" : better < -0.05 ? "mud-error-text" : "";
+}

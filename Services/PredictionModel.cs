@@ -223,10 +223,13 @@ public sealed class PredictionModel
         };
     }
 
-    private Rating GetRating(int teamId) =>
+    /// <summary>Teamwerte; Teams ohne Spiele bekommen den Ligaschnitt bzw. den Aufsteiger-Startwert.</summary>
+    public Rating GetRating(int teamId) =>
         _ratings.TryGetValue(teamId, out var rating) ? rating
         : _newTeams.Contains(teamId) ? new Rating(NewTeamAttackPrior, NewTeamDefensePrior)
         : new Rating(0, 0);
+
+    public bool IsNewTeam(int teamId) => _newTeams.Contains(teamId);
 
     /// <summary>Tipp mit den höchsten erwarteten Kicktipp-Punkten über alle möglichen Ergebnisse.</summary>
     private static (int Home, int Away) FindBestTip(double[,] matrix)
@@ -271,7 +274,8 @@ public sealed class PredictionModel
         return bestRho;
     }
 
-    private static double Tau(int homeGoals, int awayGoals, double lambdaHome, double lambdaAway, double rho) => (homeGoals, awayGoals) switch
+    /// <summary>Dixon-Coles-Korrekturfaktor; nur für 0:0, 1:0, 0:1 und 1:1 ungleich 1.</summary>
+    public static double Tau(int homeGoals, int awayGoals, double lambdaHome, double lambdaAway, double rho) => (homeGoals, awayGoals) switch
     {
         (0, 0) => 1 - lambdaHome * lambdaAway * rho,
         (0, 1) => 1 + lambdaHome * rho,
@@ -280,7 +284,8 @@ public sealed class PredictionModel
         _ => 1
     };
 
-    private static double[] PoissonPmf(double lambda)
+    /// <summary>Poisson-Wahrscheinlichkeiten für 0 bis <see cref="MaxGoals"/> Tore.</summary>
+    public static double[] PoissonPmf(double lambda)
     {
         var pmf = new double[MaxGoals + 1];
         pmf[0] = Math.Exp(-lambda);

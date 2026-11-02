@@ -1,5 +1,7 @@
 @* Prognose eines Spiels: Tipp, erwartete Tore und Sieg/Remis/Niederlage-Wahrscheinlichkeiten. *@
+@inject NavigationManager NavigationManager
 
+<div class="ft-prediction-card h-100" role="link" tabindex="0" title="So entsteht der Tipp" @onclick="OpenDetails" @onkeydown="OnKeyDown">
 <MudPaper Class="ft-card pa-4 h-100" Elevation="0" Outlined="true">
     <div class="d-flex align-center justify-space-between mb-3">
         <MudText Typo="Typo.caption" Class="mud-text-secondary">@Game.GetFormattedDateTime("ddd, dd.MM. HH:mm")</MudText>
@@ -19,7 +21,7 @@
     <div class="ft-prediction-match">
         <div class="ft-prediction-team">
             <TeamLogo Url="@Game.Team1.LogoUrl" Name="@Game.Team1.Name" Size="40" />
-            <a href="@($"TeamDetailsPage/{Game.Team1.Id}")" class="ft-prediction-team-name ft-two-lines">@Game.Team1.DisplayName</a>
+            <a href="@($"TeamDetailsPage/{Game.Team1.Id}")" class="ft-prediction-team-name ft-two-lines" @onclick:stopPropagation>@Game.Team1.DisplayName</a>
             <FormChips Form="@HomeForm" />
         </div>
         <div class="ft-prediction-tip">
@@ -28,7 +30,7 @@
         </div>
         <div class="ft-prediction-team">
             <TeamLogo Url="@Game.Team2.LogoUrl" Name="@Game.Team2.Name" Size="40" />
-            <a href="@($"TeamDetailsPage/{Game.Team2.Id}")" class="ft-prediction-team-name ft-two-lines">@Game.Team2.DisplayName</a>
+            <a href="@($"TeamDetailsPage/{Game.Team2.Id}")" class="ft-prediction-team-name ft-two-lines" @onclick:stopPropagation>@Game.Team2.DisplayName</a>
             <FormChips Form="@AwayForm" />
         </div>
     </div>
@@ -66,7 +68,12 @@
             </MudText>
         }
     </div>
+    <div class="ft-prediction-more">
+        <span>So entsteht der Tipp</span>
+        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+    </div>
 </MudPaper>
+</div>
 
 @code {
     [Parameter, EditorRequired] public MatchPrediction Prediction { get; set; } = null!;
@@ -78,6 +85,14 @@
     private (int Home, int Away) Tip => Prediction.GetTip(Strategy);
 
     private static int Percent(double probability) => (int)Math.Round(probability * 100);
+
+    private void OpenDetails() => NavigationManager.NavigateTo($"statistiken/prognosen/spiel/{Game.MatchId}");
+
+    private void OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or " ")
+            OpenDetails();
+    }
 
     private string OutcomeClass(MatchOutcome outcome) =>
         outcome == MatchPrediction.GetOutcome(Tip) ? "font-weight-bold" : "mud-text-secondary";

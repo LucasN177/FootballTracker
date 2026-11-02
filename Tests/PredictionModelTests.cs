@@ -77,6 +77,36 @@ public class PredictionModelTests
     }
 
     [Fact]
+    public void Expected_goals_are_the_product_of_the_factors()
+    {
+        var model = FitSyntheticLeague();
+        var prediction = model.Predict(TestData.Open(2, 6));
+        var home = model.GetRating(2);
+        var away = model.GetRating(6);
+
+        Assert.Equal(model.BaseGoals * model.HomeFactor * Math.Exp(home.Attack) * Math.Exp(away.Defense), prediction.ExpectedGoalsHome, precision: 10);
+        Assert.Equal(model.BaseGoals * Math.Exp(away.Attack) * Math.Exp(home.Defense), prediction.ExpectedGoalsAway, precision: 10);
+    }
+
+    [Fact]
+    public void Unknown_team_gets_league_average()
+    {
+        var model = FitSyntheticLeague();
+
+        Assert.Equal(new PredictionModel.Rating(0, 0), model.GetRating(12345));
+        Assert.False(model.IsNewTeam(12345));
+    }
+
+    [Fact]
+    public void Dixon_coles_only_changes_low_scores()
+    {
+        Assert.Equal(1, PredictionModel.Tau(2, 1, 1.5, 1.2, -0.1));
+        Assert.Equal(1.1, PredictionModel.Tau(1, 1, 1.5, 1.2, -0.1), precision: 10);
+        Assert.Equal(1 + 1.5 * 1.2 * 0.1, PredictionModel.Tau(0, 0, 1.5, 1.2, -0.1), precision: 10);
+        Assert.Equal(1, PredictionModel.PoissonPmf(1.7).Sum(), precision: 4);
+    }
+
+    [Fact]
     public void Weight_halves_after_half_life()
     {
         var reference = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
