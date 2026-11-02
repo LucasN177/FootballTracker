@@ -1,5 +1,6 @@
 using FootballTracker.Core.Models;
 using FootballTracker.Core.Models.Statistics;
+using FootballTracker.Core.Models.Extensions;
 
 namespace FootballTracker.Services;
 
@@ -9,6 +10,20 @@ public class MatchDayForecast
     public int MatchDay { get; init; }
     public PredictionModel? Model { get; init; }
     public List<MatchPrediction> Predictions { get; init; } = new();
+}
+
+/// <summary>Alles, was zur Aufschlüsselung einer einzelnen Prognose gebraucht wird.</summary>
+public class MatchExplanation
+{
+    public required MatchPrediction Prediction { get; init; }
+    public required PredictionModel Model { get; init; }
+
+    /// <summary>Stand der Daten: Anstoß des ersten Spiels des Spieltags.</summary>
+    public DateTime Cutoff { get; init; }
+
+    /// <summary>Spiele, aus denen die Werte des Heim- bzw. Gastteams geschätzt wurden, neueste zuerst.</summary>
+    public required List<(Game Game, double Weight)> HomeGames { get; init; }
+    public required List<(Game Game, double Weight)> AwayGames { get; init; }
 }
 
 /// <summary>
@@ -37,6 +52,35 @@ public class PredictionService(GameService gameService, AppStateService appState
     {
         var data = await LoadAsync(season);
         return GetMatchDay(data, matchDay);
+    }
+
+    /// <summary>Prognose eines Spiels mit Modell und Datengrundlage. Null, wenn das Spiel unbekannt ist oder keine Prognose hat.</summary>
+    public async Task<MatchExplanation?> GetExplanationAsync(int season, int matchId)
+    {
+        var data = await LoadAsync(season);
+        if (data.Games.FirstOrDefault(g => g.MatchId == matchId) is not { } game)
+            return null;
+
+        var forecast = GetMatchDay(data, game.MatchDay);
+        if (forecast.Model is not { } model || forecast.Predictions.FirstOrDefault(p => p.Game.MatchId == matchId) is not { } prediction)
+            return null;
+
+        var cutoff = data.Games.Where(g => g.MatchDay == game.MatchDay).Min(g => g.KickoffUtc);
+        var training = TrainingGames(data, cutoff).ToList();
+        List<(Game, double)> GamesOf(int teamId) => training
+            .Where(g => g.Involves(teamId))
+            .OrderByDescending(g => g.KickoffUtc)
+            .Select(g => (g, PredictionModel.GetWeight(g.KickoffUtc, cutoff)))
+            .ToList();
+
+        return new MatchExplanation
+        {
+            Prediction = prediction,
+            Model = model,
+            Cutoff = cutoff,
+            HomeGames = GamesOf(game.Team1.Id),
+            AwayGames = GamesOf(game.Team2.Id)
+        };
     }
 
     /// <summary>Bewertet das Modell an allen beendeten Spielen der Saison. Gibt nach jedem Spieltag die Oberfläche frei.</summary>
@@ -145,8 +189,7 @@ public class PredictionService(GameService gameService, AppStateService appState
     /// <summary>Trainiert das Modell mit allen Spielen, die vor <paramref name="cutoff"/> angepfiffen und beendet wurden.</summary>
     private static PredictionModel? FitModel(SeasonData data, DateTime cutoff)
     {
-        var samples = data.PreviousGames.Concat(data.Games)
-            .Where(g => g.MatchIsFinished && g.FinalResult != null && g.KickoffUtc < cutoff)
+        var samples = TrainingGames(data, cutoff)
             .Select(g => new PredictionModel.Sample(g.Team1.Id, g.Team2.Id, g.FinalResult!.PointsTeam1, g.FinalResult.PointsTeam2,
                 PredictionModel.GetWeight(g.KickoffUtc, cutoff)))
             .ToList();
@@ -157,4 +200,7 @@ public class PredictionService(GameService gameService, AppStateService appState
         var teamIds = data.Games.SelectMany(g => new[] { g.Team1.Id, g.Team2.Id }).Distinct();
         return PredictionModel.Fit(samples, teamIds, data.NewTeams);
     }
+
+    private static IEnumerable<Game> TrainingGames(SeasonData data, DateTime cutoff) =>
+        data.PreviousGames.Concat(data.Games).Where(g => g.MatchIsFinished && g.FinalResult != null && g.KickoffUtc < cutoff);
 }

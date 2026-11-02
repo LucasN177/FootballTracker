@@ -1,0 +1,16 @@
+@* Nummerierte Überschrift eines Rechenschritts mit kurzer Erklärung darunter. *@
+
+<div class="d-flex align-center gap-2 mb-1">
+    <span class="ft-step-badge">@Number</span>
+    <MudText Typo="Typo.h6">@Title</MudText>
+</div>
+@if (ChildContent != null)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3 ft-step-text">@ChildContent</MudText>
+}
+
+@code {
+    [Parameter] public int Number { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

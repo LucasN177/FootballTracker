@@ -44,6 +44,41 @@ public class MatchPredictionTests
     }
 
     [Fact]
+    public void Points_breakdown_splits_probabilities_by_points()
+    {
+        var matrix = new double[11, 11];
+        matrix[2, 1] = 0.2; // exakt
+        matrix[1, 0] = 0.3; // gleiche Tordifferenz
+        matrix[3, 0] = 0.1; // nur Tendenz
+        matrix[1, 1] = 0.25; // Remis: 0 Punkte
+        matrix[0, 2] = 0.15; // Auswärtssieg: 0 Punkte
+        var prediction = TestData.Prediction(TestData.Open(1, 2), matrix);
+
+        var breakdown = prediction.GetPointsBreakdown((2, 1));
+
+        Assert.Equal(0.2, breakdown.Exact, precision: 10);
+        Assert.Equal(0.3, breakdown.Difference, precision: 10);
+        Assert.Equal(0.1, breakdown.Tendency, precision: 10);
+        Assert.Equal(prediction.GetExpectedPoints((2, 1)), breakdown.Expected, precision: 10);
+    }
+
+    [Fact]
+    public void Draw_tip_has_no_goal_difference_points()
+    {
+        var matrix = new double[11, 11];
+        matrix[1, 1] = 0.4;
+        matrix[2, 2] = 0.1;
+        matrix[1, 0] = 0.5;
+        var prediction = TestData.Prediction(TestData.Open(1, 2), matrix);
+
+        var breakdown = prediction.GetPointsBreakdown((1, 1));
+
+        Assert.Equal(0.4, breakdown.Exact, precision: 10);
+        Assert.Equal(0, breakdown.Difference);
+        Assert.Equal(0.1, breakdown.Tendency, precision: 10);
+    }
+
+    [Fact]
     public void Evaluation_uses_the_final_result()
     {
         var game = TestData.Finished(1, 2, 2, 1);
