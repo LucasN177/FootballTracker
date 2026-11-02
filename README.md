@@ -44,7 +44,11 @@ eigenes Farbschema und Logo.
   - Performance: Punkteverlauf und Formtabelle
   - Team-Vergleich: zwei Teams gegenübergestellt inkl. direktem Vergleich
   - Prognosen: Tipp, erwartete Tore und Sieg/Remis/Niederlage-Wahrscheinlichkeiten je Spiel, Teamstärken und
-    eine Saisonbilanz des Modells (Tendenz, exakte Treffer, Kicktipp-Punkte, Brier-Score)
+    eine Saisonbilanz des Modells (Tendenz, Sieger/Remis, exakte Treffer, Kicktipp-Punkte, Brier-Score).
+    Tipp-Strategie wählbar: Kicktipp-optimal oder mit Remis-Tipps.
+    - Saisonprognose: 10.000 simulierte Saisonverläufe ergeben die Chancen auf Meisterschaft, Europapokal,
+      Aufstieg, Relegation und Abstieg (Champions League: Top 8, Playoffs, Aus)
+    - Verlauf: Trefferquote je Spieltag und Bilanz des Modells in allen Saisons
 - ⚙️ **Einstellungen & Profil** – Dark Mode, Wettbewerb, Saison, Login/Registrierung und Profilbearbeitung
 
 Alles läuft als **Blazor WebAssembly App** direkt im Browser – kein eigenes Backend.
@@ -71,6 +75,11 @@ beider Teams ergeben über die Poisson-Verteilung die Wahrscheinlichkeit jedes E
 - Ein Spiel verliert nach 270 Tagen die Hälfte seines Gewichts. Teamwerte werden zum Ligaschnitt gezogen, Aufsteiger
   starten etwas schwächer.
 - Der Tipp ist das Ergebnis mit den meisten erwarteten Kicktipp-Punkten (4 exakt, 3 Tordifferenz, 2 Tendenz).
+  Dabei kommt fast nie ein Remis heraus. Die Strategie „Mit Remis-Tipps“ tippt das wahrscheinlichste Remis, wenn
+  Heim- und Auswärtssieg weniger als 10 Prozentpunkte auseinanderliegen – im Backtest etwa so oft wie tatsächlich
+  Remis fallen, für rund 0,07 Kicktipp-Punkte weniger pro Spiel.
+- Die Saisonprognose spielt die offenen Spiele 10.000-mal nach den Ergebniswahrscheinlichkeiten durch. Die Teamstärken
+  bleiben dabei fest; bei Gleichstand entscheiden Tordifferenz, Tore und danach das Los.
 - Für jeden Spieltag wird nur mit Spielen gerechnet, die vorher beendet waren. So ist die Saisonbilanz ein ehrlicher
   Rückblick.
 
@@ -104,6 +113,7 @@ Services/        Spieldaten, Tabellen, Statistiken, Prognosen, Favoriten, Auth, 
 Pages/           Seiten, Komponenten und Dialoge
 Layout/          Hauptlayout und Theme je Wettbewerb
 supabase/        Datenbankschema
+Tests/           xUnit-Tests (Prognosemodell, Kicktipp-Wertung, Saisonsimulation, Tabellenberechnung)
 ```
 
 ---
@@ -138,3 +148,11 @@ dotnet run
 
 Für Login und Favoriten lokal `Supabase:Url` und `Supabase:AnonKey` in `wwwroot/appsettings.json`
 eintragen (nicht committen).
+
+### Tests ausführen
+
+```bash
+dotnet test Tests/FootballTracker.Tests.csproj
+```
+
+Die Tests laufen auch im Deployment-Workflow vor dem Veröffentlichen.

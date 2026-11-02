@@ -5,8 +5,8 @@
         <MudText Typo="Typo.caption" Class="mud-text-secondary">@Game.GetFormattedDateTime("ddd, dd.MM. HH:mm")</MudText>
         @if (Prediction.ActualScore is { } actual)
         {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(Prediction.IsTendencyHit ? Color.Success : Color.Error)"
-                     Icon="@(Prediction.IsTendencyHit ? Icons.Material.Filled.Check : Icons.Material.Filled.Close)" Class="ma-0">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(Prediction.IsTendencyHit(Strategy) ? Color.Success : Color.Error)"
+                     Icon="@(Prediction.IsTendencyHit(Strategy) ? Icons.Material.Filled.Check : Icons.Material.Filled.Close)" Class="ma-0">
                 Ergebnis @actual.Home:@actual.Away
             </MudChip>
         }
@@ -23,8 +23,8 @@
             <FormChips Form="@HomeForm" />
         </div>
         <div class="ft-prediction-tip">
-            <div class="ft-prediction-score">@Prediction.Tip.Home:@Prediction.Tip.Away</div>
-            <MudText Typo="Typo.caption" Class="mud-text-secondary">Tipp</MudText>
+            <div class="ft-prediction-score">@Tip.Home:@Tip.Away</div>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(Tip == Prediction.Tip ? "Tipp" : "Remis-Tipp")</MudText>
         </div>
         <div class="ft-prediction-team">
             <TeamLogo Url="@Game.Team2.LogoUrl" Name="@Game.Team2.Name" Size="40" />
@@ -53,7 +53,7 @@
         <MudText Typo="Typo.caption" Class="mud-text-secondary">
             Wahrscheinlichstes Ergebnis <b>@Prediction.MostLikelyScore.Home:@Prediction.MostLikelyScore.Away</b> (@Percent(Prediction.MostLikelyProbability) %)
         </MudText>
-        @if (Prediction.KicktippPoints is { } points)
+        @if (Prediction.GetKicktippPoints(Strategy) is { } points)
         {
             <MudText Typo="Typo.caption" Class="@(points > 0 ? "mud-success-text font-weight-bold" : "mud-text-secondary")">
                 @(points == 1 ? "1 Punkt" : $"{points} Punkte")
@@ -62,7 +62,7 @@
         else
         {
             <MudText Typo="Typo.caption" Class="mud-text-secondary" title="Erwartete Kicktipp-Punkte des Tipps">
-                Ø @Prediction.TipExpectedPoints.ToString("0.00") Pkt.
+                Ø @Prediction.GetExpectedPoints(Tip).ToString("0.00") Pkt.
             </MudText>
         }
     </div>
@@ -72,11 +72,13 @@
     [Parameter, EditorRequired] public MatchPrediction Prediction { get; set; } = null!;
     [Parameter] public string? HomeForm { get; set; }
     [Parameter] public string? AwayForm { get; set; }
+    [Parameter] public TipStrategy Strategy { get; set; }
 
     private Game Game => Prediction.Game;
+    private (int Home, int Away) Tip => Prediction.GetTip(Strategy);
 
     private static int Percent(double probability) => (int)Math.Round(probability * 100);
 
     private string OutcomeClass(MatchOutcome outcome) =>
-        outcome == Prediction.PredictedOutcome ? "font-weight-bold" : "mud-text-secondary";
+        outcome == MatchPrediction.GetOutcome(Tip) ? "font-weight-bold" : "mud-text-secondary";
 }

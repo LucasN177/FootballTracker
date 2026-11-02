@@ -184,8 +184,9 @@ public sealed class PredictionModel
                 total += matrix[i, j];
             }
 
-        double homeWin = 0, draw = 0, awayWin = 0, best = -1;
+        double homeWin = 0, draw = 0, awayWin = 0, best = -1, bestDraw = -1;
         var mostLikely = (0, 0);
+        var drawTip = (0, 0);
         for (var i = 0; i <= MaxGoals; i++)
             for (var j = 0; j <= MaxGoals; j++)
             {
@@ -198,9 +199,14 @@ public sealed class PredictionModel
                     best = p;
                     mostLikely = (i, j);
                 }
+                if (i == j && p > bestDraw)
+                {
+                    bestDraw = p;
+                    drawTip = (i, j);
+                }
             }
 
-        var (tip, tipPoints) = FindBestTip(matrix);
+        var tip = FindBestTip(matrix);
         return new MatchPrediction
         {
             Game = game,
@@ -213,7 +219,7 @@ public sealed class PredictionModel
             MostLikelyScore = mostLikely,
             MostLikelyProbability = best,
             Tip = tip,
-            TipExpectedPoints = tipPoints
+            DrawTip = drawTip
         };
     }
 
@@ -223,7 +229,7 @@ public sealed class PredictionModel
         : new Rating(0, 0);
 
     /// <summary>Tipp mit den höchsten erwarteten Kicktipp-Punkten über alle möglichen Ergebnisse.</summary>
-    private static ((int Home, int Away) Tip, double Points) FindBestTip(double[,] matrix)
+    private static (int Home, int Away) FindBestTip(double[,] matrix)
     {
         var bestTip = (0, 0);
         var bestPoints = -1.0;
@@ -240,7 +246,7 @@ public sealed class PredictionModel
                     bestTip = (tipHome, tipAway);
                 }
             }
-        return (bestTip, bestPoints);
+        return bestTip;
     }
 
     /// <summary>ρ per Rastersuche: maximiert die gewichtete Log-Likelihood der Dixon-Coles-Korrektur.</summary>

@@ -456,6 +456,16 @@ h1:focus {
     margin-top: 4px;
 }
 
+.ft-sim-cell {
+    font-variant-numeric: tabular-nums;
+    min-width: 58px;
+}
+
+.ft-row-selected td {
+    background: color-mix(in srgb, var(--ft-primary) 7%, transparent);
+    font-weight: 600;
+}
+
 /* --------------------------------------------------------------------------
    Spiele
    -------------------------------------------------------------------------- */

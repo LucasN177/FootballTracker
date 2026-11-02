@@ -20,6 +20,13 @@
     <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
   </ItemGroup>
 
+  <!-- Das Testprojekt liegt im Unterordner und wird separat gebaut -->
+  <ItemGroup>
+    <Compile Remove="Tests\**" />
+    <Content Remove="Tests\**" />
+    <None Remove="Tests\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <Folder Include="Core\Enums\" />
     <Folder Include="Resources\img\" />
