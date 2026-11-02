@@ -34,7 +34,8 @@ eigenes Farbschema und Logo.
 - 📅 **Spieltage / Runden** – Spieltagsleiste, Filter (Live, Anstehend, Beendet), Teamsuche und Spieldetails
   mit Torverlauf, Halbzeitstand, Verlängerung und Elfmeterschießen
 - 👥 **Teams** und **Team-Detailseiten** – Kennzahlen, Tabellen- und Punkteverlauf, Heim/Auswärts-Bilanz,
-  Torschützen des Teams und Spielplan (im Pokal: erreichte Runde)
+  Torschützen des Teams und Spielplan (im Pokal: erreichte Runde). Dazu ein Monatskalender mit allen Spielen der
+  Saison über alle Wettbewerbe – Liga, DFB-Pokal und Champions League – farblich nach Wettbewerb und filterbar
 - 🥅 **Torschützen** – Torjägerliste mit Podium und Suche
 - ⭐ **Player Tracker** – Lieblingsspieler verfolgen: Tore, Rang, Elfmeter, Spiele mit Tor, Torverlauf pro Spieltag;
   Detailseite je Spieler mit Anteil an den Teamtoren, Torminuten und allen Toren

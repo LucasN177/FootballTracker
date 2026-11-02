@@ -1,0 +1,155 @@
+@* Monatskalender mit allen Spielen eines Teams über alle Wettbewerbe (Liga, DFB-Pokal, Champions League). *@
+@inject IDialogService DialogService
+
+<div class="d-flex align-center flex-wrap gap-2 mb-3">
+    <MudText Typo="Typo.h6" Class="flex-grow-1">Kalender</MudText>
+    <div class="d-flex align-center">
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" Disabled="@(!_months.Any() || _monthIndex <= 0)" OnClick="() => _monthIndex--" aria-label="Vorheriger Monat" />
+        <MudText Typo="Typo.subtitle1" Class="font-weight-bold ft-calendar-month">@(Month?.ToString("MMMM yyyy") ?? "–")</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Disabled="@(_monthIndex >= _months.Count - 1)" OnClick="() => _monthIndex++" aria-label="Nächster Monat" />
+    </div>
+</div>
+
+@if (_competitions.Count > 1)
+{
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        @foreach (var (competition, count) in _competitions)
+        {
+            var active = !_hidden.Contains(competition.Shortcut);
+            <button class="@($"ft-calendar-filter {(active ? "" : "off")}")" @onclick="() => Toggle(competition)" title="@(active ? "Ausblenden" : "Einblenden")">
+                <span class="ft-calendar-dot" style="@($"background:{competition.PrimaryColor}")"></span>
+                @competition.ShortName <span class="mud-text-secondary">@count</span>
+            </button>
+        }
+    </div>
+}
+
+@if (Month is not { } month)
+{
+    <MudText Class="mud-text-secondary py-6" Align="Align.Center">Für diese Saison sind keine Spiele bekannt.</MudText>
+}
+else
+{
+    <div class="ft-calendar">
+        @foreach (var weekday in WeekdayNames)
+        {
+            <div class="ft-calendar-weekday">@weekday</div>
+        }
+        @foreach (var day in CalendarDays(month))
+        {
+            var games = GamesOn(day);
+            <div class="@DayClass(day, month, games.Count > 0)">
+                <span class="ft-calendar-date">@day.Day</span>
+                @foreach (var game in games)
+                {
+                    var competition = Competition.FromShortcut(game.LeagueShortcut)!;
+                    var opponent = game.GetOpponent(TeamId);
+                    var outcome = game.GetOutcomeFor(TeamId);
+                    <button class="ft-calendar-game" style="@($"--ft-comp:{competition.PrimaryColor}")" @onclick="() => GameDetailsDialog.Show(DialogService, game)"
+                            title="@($"{competition.ShortName} • {competition.RoundName(game.MatchDay)}\n{game.Team1.Name} – {game.Team2.Name}\n{game.GetFormattedDateTime()}")">
+                        <TeamLogo Url="@opponent.LogoUrl" Name="@opponent.Name" Size="18" />
+                        <span class="ft-calendar-opponent">@(game.IsHomeTeam(TeamId) ? "" : "@ ")@opponent.DisplayName</span>
+                        @if (outcome.HasValue)
+                        {
+                            var (own, other) = game.GetGoalsFor(TeamId);
+                            <span class="@($"ft-calendar-result ft-form-{OutcomeClass(outcome)}")">@own:@other</span>
+                        }
+                        else if (game.IsLive)
+                        {
+                            <span class="ft-calendar-result ft-calendar-live">@game.GetScoreDisplay(":")</span>
+                        }
+                        else
+                        {
+                            <span class="ft-calendar-time">@game.GetFormattedDateTime("HH:mm")</span>
+                        }
+                    </button>
+                }
+            </div>
+        }
+    </div>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-2">
+        Farbe = Wettbewerb • „@@“ = Auswärtsspiel • Ergebnis aus Sicht von @TeamName • Klick öffnet die Spieldetails
+    </MudText>
+}
+
+@code {
+    private static readonly string[] WeekdayNames = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+    [Parameter, EditorRequired] public int TeamId { get; set; }
+    [Parameter] public string? TeamName { get; set; }
+
+    /// <summary>Spiele des Teams aus allen Wettbewerben.</summary>
+    [Parameter, EditorRequired] public List<Game> Games { get; set; } = new();
+
+    private List<DateTime> _months = new();
+    private int _monthIndex;
+    private List<(Competition Competition, int Count)> _competitions = new();
+    private readonly HashSet<string> _hidden = new(StringComparer.OrdinalIgnoreCase);
+    private List<Game>? _loadedGames;
+
+    private DateTime? Month => _monthIndex >= 0 && _monthIndex < _months.Count ? _months[_monthIndex] : null;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_loadedGames, Games))
+            return;
+
+        _loadedGames = Games;
+        _hidden.Clear();
+        _competitions = Games
+            .GroupBy(g => g.LeagueShortcut, StringComparer.OrdinalIgnoreCase)
+            .Select(g => (Competition.FromShortcut(g.Key)!, g.Count()))
+            .OrderBy(c => Competition.All.ToList().IndexOf(c.Item1))
+            .ToList();
+
+        _months = Games.Count == 0
+            ? new List<DateTime>()
+            : MonthsBetween(Games.Min(g => g.MatchDateTime), Games.Max(g => g.MatchDateTime)).ToList();
+
+        // Start: Monat des nächsten Spiels, nach Saisonende der letzte Monat
+        var next = Games.FirstOrDefault(g => !g.MatchIsFinished) ?? Games.LastOrDefault();
+        _monthIndex = next == null ? 0 : _months.FindIndex(m => m.Year == next.MatchDateTime.Year && m.Month == next.MatchDateTime.Month);
+    }
+
+    private static IEnumerable<DateTime> MonthsBetween(DateTime from, DateTime to)
+    {
+        for (var month = new DateTime(from.Year, from.Month, 1); month <= to; month = month.AddMonths(1))
+            yield return month;
+    }
+
+    /// <summary>Alle Tage der Wochen, die den Monat berühren (Montag bis Sonntag).</summary>
+    private static IEnumerable<DateTime> CalendarDays(DateTime month)
+    {
+        var start = month.AddDays(-(((int)month.DayOfWeek + 6) % 7));
+        var lastDay = month.AddMonths(1).AddDays(-1);
+        var end = lastDay.AddDays(6 - (((int)lastDay.DayOfWeek + 6) % 7));
+        for (var day = start; day <= end; day = day.AddDays(1))
+            yield return day;
+    }
+
+    private List<Game> GamesOn(DateTime day) => Games
+        .Where(g => g.MatchDateTime.Date == day.Date && !_hidden.Contains(g.LeagueShortcut ?? ""))
+        .ToList();
+
+    private void Toggle(Competition competition)
+    {
+        if (!_hidden.Remove(competition.Shortcut))
+            _hidden.Add(competition.Shortcut);
+    }
+
+    private static string DayClass(DateTime day, DateTime month, bool hasGames)
+    {
+        var css = "ft-calendar-day";
+        if (day.Month != month.Month) css += " outside";
+        if (day.Date == DateTime.Today) css += " today";
+        if (hasGames) css += " has-games";
+        return css;
+    }
+
+    private static string OutcomeClass(char? outcome) => outcome switch
+    {
+        'S' => "win",
+        'U' => "draw",
+        _ => "loss"
+    };
+}
