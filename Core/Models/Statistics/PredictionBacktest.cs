@@ -17,6 +17,14 @@ public class PredictionBacktest
     public double PointsPerGame => Games == 0 ? 0 : (double)KicktippPoints / Games;
     public double BrierScore => Games == 0 ? 0 : Predictions.Average(p => p.BrierScore ?? 0);
 
+    /// <summary>Spiele mit Sieger und wie oft der Tipp auf genau dieses Team lautete.</summary>
+    public int DecidedGames => Predictions.Count(p => p.ActualOutcome != MatchOutcome.Draw);
+    public int WinnerHits => Predictions.Count(p => p.ActualOutcome != MatchOutcome.Draw && p.ActualOutcome == MatchPrediction.GetOutcome(p.Tip));
+
+    /// <summary>Unentschieden und wie viele davon mit einem Remis-Tipp erkannt wurden.</summary>
+    public int DrawGames => Predictions.Count(p => p.ActualOutcome == MatchOutcome.Draw);
+    public int DrawHits => Predictions.Count(p => p.ActualOutcome == MatchOutcome.Draw && p.Tip.Home == p.Tip.Away);
+
     /// <summary>Vergleichswert: Quote, wenn man immer auf Heimsieg tippt.</summary>
     public double HomeWinBaselineRate => Games == 0 ? 0 : (double)Predictions.Count(p => p.ActualOutcome == MatchOutcome.HomeWin) / Games;
 }
