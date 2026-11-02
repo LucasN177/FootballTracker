@@ -76,9 +76,9 @@ public class Game
                 && (extra.PointsTeam1 != final.PointsTeam1 || extra.PointsTeam2 != final.PointsTeam2);
         public string DisplayResult => RegulationResult is { } result ? $"{result.PointsTeam1}:{result.PointsTeam2}" : "-:-";
         public bool IsToday => MatchDateTime.Date == DateTime.Today;
-        public bool HasStarted => StartUtc <= DateTime.UtcNow;
+        public bool HasStarted => KickoffUtc <= DateTime.UtcNow;
         public bool IsUpcoming => !MatchIsFinished && !HasStarted;
-        public bool IsLive => !MatchIsFinished && HasStarted && DateTime.UtcNow - StartUtc < LiveWindow;
+        public bool IsLive => !MatchIsFinished && HasStarted && DateTime.UtcNow - KickoffUtc < LiveWindow;
 
         /// <summary>Aktueller Spielstand: Endergebnis, sonst letztes Tor, sonst Halbzeitstand.</summary>
         public (int Team1, int Team2)? CurrentScore
@@ -96,7 +96,7 @@ public class Game
                 }
         }
 
-        private DateTime StartUtc => MatchDateTimeUtc == default
+        public DateTime KickoffUtc => MatchDateTimeUtc == default
                 ? MatchDateTime.ToUniversalTime()
                 : DateTime.SpecifyKind(MatchDateTimeUtc, DateTimeKind.Utc);
 }

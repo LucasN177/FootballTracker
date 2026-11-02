@@ -377,6 +377,66 @@ h1:focus {
 .ft-wdl-bar .draw { background: var(--ft-draw); }
 .ft-wdl-bar .loss { background: var(--ft-loss); }
 
+/* Prognosen */
+.ft-prediction-match {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+}
+
+.ft-prediction-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    text-align: center;
+}
+
+.ft-prediction-team-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.ft-prediction-team-name:hover {
+    color: var(--ft-primary);
+}
+
+.ft-prediction-tip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 4px;
+}
+
+.ft-prediction-score {
+    font-size: 1.6rem;
+    font-weight: 800;
+    padding: 2px 14px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--ft-primary) 10%, transparent);
+    color: var(--ft-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.ft-prediction-bar {
+    height: 12px;
+}
+
+.ft-prediction-facts {
+    padding-left: 1.1rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--mud-palette-text-secondary);
+}
+
+.ft-prediction-facts li + li {
+    margin-top: 4px;
+}
+
 /* --------------------------------------------------------------------------
    Spiele
    -------------------------------------------------------------------------- */

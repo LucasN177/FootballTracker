@@ -55,6 +55,7 @@ builder.Services.AddSingleton<GameService>();
 builder.Services.AddSingleton<StatisticsService>();
 builder.Services.AddSingleton<TabellenService>();
 builder.Services.AddSingleton<TeamService>();
+builder.Services.AddSingleton<PredictionService>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
 builder.Services.AddSingleton<FavoritesService>();
 

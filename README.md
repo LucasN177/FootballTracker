@@ -43,6 +43,8 @@ eigenes Farbschema und Logo.
   - Torstatistiken: Tore pro Spieltag, Torzeitpunkte, Spielausgänge, Rekorde
   - Performance: Punkteverlauf und Formtabelle
   - Team-Vergleich: zwei Teams gegenübergestellt inkl. direktem Vergleich
+  - Prognosen: Tipp, erwartete Tore und Sieg/Remis/Niederlage-Wahrscheinlichkeiten je Spiel, Teamstärken und
+    eine Saisonbilanz des Modells (Tendenz, exakte Treffer, Kicktipp-Punkte, Brier-Score)
 - ⚙️ **Einstellungen & Profil** – Dark Mode, Wettbewerb, Saison, Login/Registrierung und Profilbearbeitung
 
 Alles läuft als **Blazor WebAssembly App** direkt im Browser – kein eigenes Backend.
@@ -57,6 +59,23 @@ Die App ist als **PWA** installierbar und für Smartphones optimiert.
 - Die Tabelle der Champions League von OpenLigaDB enthält auch K.-o.-Spiele, daher wird die Ligaphasen-Tabelle
   aus den Spieltagen 1–8 berechnet.
 - Wettbewerbslogos werden von Wikimedia Commons geladen.
+
+### 🔮 Prognosemodell
+
+Die Prognosen nutzen ein **Dixon-Coles-Modell**: Jedes Team hat einen Angriffs- und einen Abwehrwert, dazu kommen
+ein ligaweiter Heimvorteil und ein Korrekturfaktor ρ für knappe Ergebnisse (0:0, 1:0, 0:1, 1:1). Die erwarteten Tore
+beider Teams ergeben über die Poisson-Verteilung die Wahrscheinlichkeit jedes Ergebnisses.
+
+- Die Werte werden per gewichteter Maximum-Likelihood aus der laufenden Saison und der Vorsaison geschätzt. Dadurch
+  fließt auch die Stärke der bisherigen Gegner ein.
+- Ein Spiel verliert nach 270 Tagen die Hälfte seines Gewichts. Teamwerte werden zum Ligaschnitt gezogen, Aufsteiger
+  starten etwas schwächer.
+- Der Tipp ist das Ergebnis mit den meisten erwarteten Kicktipp-Punkten (4 exakt, 3 Tordifferenz, 2 Tendenz).
+- Für jeden Spieltag wird nur mit Spielen gerechnet, die vorher beendet waren. So ist die Saisonbilanz ein ehrlicher
+  Rückblick.
+
+Halbwertszeit und Regularisierung wurden per Backtest über 1. und 2. Bundesliga 2021/22 bis 2025/26 (3.060 Spiele)
+gewählt: rund 49 % richtige Tendenzen (immer Heimsieg: 44 %), 9 % exakte Ergebnisse, Brier-Score 0,614.
 
 ---
 
@@ -81,7 +100,7 @@ https://lucasn177.github.io/FootballTracker
 ```
 Core/            Modelle (Spiele, Teams, Wettbewerbe, Statistiken) und Interfaces
 Infrastructure/  OpenLigaDB- und Supabase-Repositories, Session-Speicherung
-Services/        Spieldaten, Tabellen, Statistiken, Favoriten, Auth, App-Zustand
+Services/        Spieldaten, Tabellen, Statistiken, Prognosen, Favoriten, Auth, App-Zustand
 Pages/           Seiten, Komponenten und Dialoge
 Layout/          Hauptlayout und Theme je Wettbewerb
 supabase/        Datenbankschema
