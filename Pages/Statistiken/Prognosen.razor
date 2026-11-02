@@ -1,0 +1,247 @@
+@page "/statistiken/prognosen"
+@inherits SeasonPageBase
+@inject GameService GameService
+@inject PredictionService PredictionService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Prognosen • Football Tracker</PageTitle>
+
+<PageHeader Title="Prognosen" Subtitle="@($"Vorhersagen aus den bisherigen Ergebnissen • Saison {AppStateService.SelectedSeason.Name}")" Icon="@Icons.Material.Filled.Insights">
+    <Actions>
+        @if (Comp.IsLeague)
+        {
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Today" Color="Color.Primary" OnClick="() => SelectMatchDay(_nextMatchDay)" Disabled="IsLoading">
+                Nächster Spieltag
+            </MudButton>
+        }
+    </Actions>
+</PageHeader>
+
+<LeagueOnly Text="Die Prognosen werden aus Ligaspielen berechnet und sind im Pokal nicht verfügbar.">
+    <MudPaper Class="ft-card pa-2 mb-4" Elevation="0" Outlined="true">
+        <div class="d-flex align-center gap-1">
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Disabled="@(_selectedMatchDay <= 1 || IsLoading)" OnClick="() => SelectMatchDay(_selectedMatchDay - 1)" />
+            <div class="ft-matchday-strip flex-grow-1">
+                @foreach (var matchDay in Enumerable.Range(1, GameService.MatchDaysPerSeason))
+                {
+                    var day = matchDay;
+                    <button class="@MatchDayClass(day)" @onclick="() => SelectMatchDay(day)" id="@($"md-{day}")">@Comp.RoundShortName(day)</button>
+                }
+            </div>
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(_selectedMatchDay >= GameService.MatchDaysPerSeason || IsLoading)" OnClick="() => SelectMatchDay(_selectedMatchDay + 1)" />
+        </div>
+    </MudPaper>
+
+    <MudText Typo="Typo.overline" Class="mud-text-secondary d-block mb-2">Bilanz des Modells in dieser Saison</MudText>
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="6" md="3">
+            <StatCard Icon="@Icons.Material.Filled.TrackChanges" Color="Color.Success" Value="@BacktestValue(b => b.TendencyRate.ToString("P0"))" Label="Tendenz richtig"
+                      Hint="@BacktestValue(b => $"Immer Heimsieg: {b.HomeWinBaselineRate:P0}")" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <StatCard Icon="@Icons.Material.Filled.GpsFixed" Color="Color.Primary" Value="@BacktestValue(b => $"{b.ExactHits} / {b.Games}")" Label="Exakte Ergebnisse"
+                      Hint="@BacktestValue(b => b.ExactRate.ToString("P1"))" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Value="@BacktestValue(b => b.KicktippPoints.ToString())" Label="Kicktipp-Punkte"
+                      Hint="@BacktestValue(b => $"Ø {b.PointsPerGame:0.00} pro Spiel")" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <StatCard Icon="@Icons.Material.Filled.Speed" Color="Color.Info" Value="@BacktestValue(b => b.BrierScore.ToString("0.000"))" Label="Brier-Score"
+                      Hint="Raten: 0,667 • kleiner ist besser" />
+        </MudItem>
+    </MudGrid>
+
+    <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!(_forecast?.Predictions.Any() ?? false)"
+               EmptyIcon="@Icons.Material.Filled.Insights"
+               EmptyTitle="@(_hasGames ? "Noch zu wenige Daten" : "Keine Spiele angesetzt")"
+               EmptyText="@(_hasGames ? "Für eine Prognose braucht das Modell mindestens zehn beendete Spiele aus dieser oder der Vorsaison." : "Für diesen Spieltag sind noch keine Begegnungen bekannt.")">
+        <MudGrid Spacing="3" Class="mb-4">
+            @foreach (var prediction in _forecast!.Predictions)
+            {
+                <MudItem xs="12" sm="6" lg="4">
+                    <PredictionCard Prediction="prediction" HomeForm="@FormBefore(prediction.Game, prediction.Game.Team1.Id)" AwayForm="@FormBefore(prediction.Game, prediction.Game.Team2.Id)" />
+                </MudItem>
+            }
+        </MudGrid>
+
+        <MudGrid Spacing="3">
+            <MudItem xs="12" lg="7">
+                <MudPaper Class="ft-card pa-0 pa-md-2 h-100" Elevation="0" Outlined="true">
+                    <div class="pa-4 pb-2">
+                        <MudText Typo="Typo.h6">Teamstärken laut Modell</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Stand vor dem @(_selectedMatchDay). Spieltag, im Vergleich zum Ligaschnitt</MudText>
+                    </div>
+                    <MudTable T="RatingRow" Items="_ratings" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.None"
+                              OnRowClick="@(args => NavigationManager.NavigateTo($"TeamDetailsPage/{args.Item!.Team.Id}"))" RowClass="ft-clickable" Class="ft-table">
+                        <HeaderContent>
+                            <MudTh>#</MudTh>
+                            <MudTh>Team</MudTh>
+                            <MudTh Class="text-center">Angriff</MudTh>
+                            <MudTh Class="text-center">Abwehr</MudTh>
+                            <MudTh Class="text-center d-none d-sm-table-cell">Ø Tordiff.</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Position</MudTd>
+                            <MudTd>
+                                <div class="d-flex align-center gap-2">
+                                    <TeamLogo Url="@context.Team.LogoUrl" Name="@context.Team.Name" Size="22" />
+                                    <span class="ft-ellipsis">@context.Team.DisplayName</span>
+                                </div>
+                            </MudTd>
+                            <MudTd Class="@($"text-center ft-nowrap {DeltaClass(context.AttackFactor - 1)}")" title="Tore im Vergleich zum Schnitt">@Delta(context.AttackFactor)</MudTd>
+                            <MudTd Class="@($"text-center ft-nowrap {DeltaClass(1 - context.DefenseFactor)}")" title="Gegentore im Vergleich zum Schnitt">@Delta(context.DefenseFactor)</MudTd>
+                            <MudTd Class="text-center d-none d-sm-table-cell font-weight-bold" title="Erwartete Tordifferenz pro Spiel gegen ein durchschnittliches Team auf neutralem Platz">@context.GoalDifference.ToString("+0.00;-0.00;0.00")</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" lg="5">
+                <MudPaper Class="ft-card pa-4 pa-md-5 h-100" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h6" Class="mb-2">So entsteht die Prognose</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-3">
+                        Jedes Team bekommt einen Angriffs- und einen Abwehrwert. Daraus ergeben sich die erwarteten Tore beider Teams,
+                        und mit der Poisson-Verteilung die Wahrscheinlichkeit jedes Ergebnisses (Dixon-Coles-Modell).
+                    </MudText>
+                    <ul class="ft-prediction-facts mb-3">
+                        <li>Die Werte werden so geschätzt, dass sie alle bisherigen Ergebnisse am besten erklären. Dadurch zählt auch, gegen wen ein Team gespielt hat.</li>
+                        <li>Neuere Spiele zählen mehr: Ein Spiel verliert nach @((int)PredictionModel.HalfLifeDays) Tagen die Hälfte seines Gewichts. Die Vorsaison fließt mit ein.</li>
+                        <li>Aufsteiger starten etwas schwächer als der Ligaschnitt, bis eigene Ergebnisse vorliegen.</li>
+                        <li>Der Tipp ist das Ergebnis mit den meisten erwarteten Kicktipp-Punkten (4 / 3 / 2) – nicht immer das wahrscheinlichste.</li>
+                        <li>Vergangene Spieltage zeigen die Prognose, die vor dem Spieltag berechnet worden wäre.</li>
+                    </ul>
+                    @if (_forecast.Model is { } model)
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Heimvorteil +@(((model.HomeFactor - 1) * 100).ToString("0")) % Tore</MudChip>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Ø-Team auswärts: @model.BaseGoals.ToString("0.00") Tore</MudChip>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">ρ = @model.Rho.ToString("0.00")</MudChip>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@model.TrainingGames Spiele ausgewertet</MudChip>
+                        </div>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </DataState>
+</LeagueOnly>
+
+@code {
+    private record RatingRow(int Position, Team Team, double AttackFactor, double DefenseFactor, double GoalDifference);
+
+    private Competition Comp => AppStateService.SelectedCompetition;
+
+    private List<Game> _games = new();
+    private MatchDayForecast? _forecast;
+    private List<RatingRow> _ratings = new();
+    private PredictionBacktest? _backtest;
+    private CancellationTokenSource? _backtestCts;
+    private bool _hasGames;
+    private int _selectedMatchDay = 1;
+    private int _nextMatchDay = 1;
+    private int _scrolledMatchDay;
+
+    protected override async Task LoadDataAsync()
+    {
+        _backtestCts?.Cancel();
+        _backtest = null;
+        _forecast = null;
+        if (Comp.IsCup)
+            return;
+
+        _games = await GameService.GetSeasonGamesAsync(Season);
+        _nextMatchDay = await PredictionService.GetNextMatchDayAsync(Season);
+        _selectedMatchDay = _nextMatchDay;
+        await LoadMatchDay();
+
+        _backtestCts = new CancellationTokenSource();
+        _ = RunBacktestAsync(Season, _backtestCts.Token);
+    }
+
+    private async Task LoadMatchDay()
+    {
+        _forecast = await PredictionService.GetMatchDayAsync(Season, _selectedMatchDay);
+        _hasGames = _games.Any(g => g.MatchDay == _selectedMatchDay);
+
+        var teams = _games.SelectMany(g => new[] { g.Team1, g.Team2 }).DistinctBy(t => t.Id).ToDictionary(t => t.Id);
+        _ratings = _forecast.Model is not { } model
+            ? new List<RatingRow>()
+            : model.Ratings
+                .Where(r => teams.ContainsKey(r.Key))
+                .Select(r => new RatingRow(
+                    0,
+                    teams[r.Key],
+                    Math.Exp(r.Value.Attack),
+                    Math.Exp(r.Value.Defense),
+                    model.BaseGoals * (Math.Exp(r.Value.Attack) - Math.Exp(r.Value.Defense))))
+                .OrderByDescending(r => r.GoalDifference)
+                .Select((r, i) => r with { Position = i + 1 })
+                .ToList();
+    }
+
+    private async Task RunBacktestAsync(int season, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var backtest = await PredictionService.GetBacktestAsync(season, cancellationToken);
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                _backtest = backtest;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+    }
+
+    private Task SelectMatchDay(int matchDay)
+    {
+        _selectedMatchDay = Math.Clamp(matchDay, 1, GameService.MatchDaysPerSeason);
+        return RunAsync(LoadMatchDay);
+    }
+
+    private string? BacktestValue(Func<PredictionBacktest, string> format) =>
+        _backtest == null ? (Comp.IsCup ? "–" : "…")
+        : _backtest.Games == 0 ? "–"
+        : format(_backtest);
+
+    /// <summary>Form der letzten fünf Spiele vor dem Anstoß.</summary>
+    private string FormBefore(Game game, int teamId) => new(_games
+        .Where(g => g.MatchIsFinished && g.Involves(teamId) && g.KickoffUtc < game.KickoffUtc)
+        .OrderBy(g => g.KickoffUtc)
+        .TakeLast(5)
+        .Select(g => g.GetOutcomeFor(teamId) ?? '-')
+        .ToArray());
+
+    private static string Delta(double factor) => (factor - 1).ToString("+0 %;-0 %;±0 %");
+
+    private static string DeltaClass(double better) => better > 0.05 ? "mud-success-text" : better < -0.05 ? "mud-error-text" : "";
+
+    private string MatchDayClass(int day)
+    {
+        var css = "ft-matchday";
+        if (day == _selectedMatchDay) css += " selected";
+        if (day == _nextMatchDay) css += " current";
+        return css;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!IsLoading && _scrolledMatchDay != _selectedMatchDay)
+        {
+            _scrolledMatchDay = _selectedMatchDay;
+            await JS.InvokeVoidAsync("ftScrollIntoView", $"md-{_selectedMatchDay}");
+        }
+    }
+
+    public override void Dispose()
+    {
+        _backtestCts?.Cancel();
+        base.Dispose();
+    }
+}
