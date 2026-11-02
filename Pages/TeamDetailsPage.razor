@@ -204,6 +204,33 @@
                         </div>
                     </MudPaper>
                 </MudItem>
+
+                <!-- Kalender über alle Wettbewerbe -->
+                <MudItem xs="12">
+                    <MudPaper Class="ft-card pa-3 pa-md-5" Elevation="0" Outlined="true">
+                        @if (_calendarGames == null)
+                        {
+                            <MudText Typo="Typo.h6" Class="mb-3">Kalender</MudText>
+                            @if (_calendarFailed)
+                            {
+                                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                    <div class="d-flex align-center flex-wrap gap-2">
+                                        <span>Die Spiele aus allen Wettbewerben konnten nicht geladen werden.</span>
+                                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Warning" OnClick="LoadCalendarAsync">Erneut versuchen</MudButton>
+                                    </div>
+                                </MudAlert>
+                            }
+                            else
+                            {
+                                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                            }
+                        }
+                        else
+                        {
+                            <TeamCalendar TeamId="TeamId" TeamName="@team.DisplayName" Games="_calendarGames" />
+                        }
+                    </MudPaper>
+                </MudItem>
             </MudGrid>
         }
     </ChildContent>
@@ -219,6 +246,8 @@
     private List<PlayerSeasonStats> _scorers = new();
     private int _playedMatchDays;
     private bool _showAllGames;
+    private List<Game>? _calendarGames;
+    private bool _calendarFailed;
 
     private List<ChartSeries> _pointsSeries = new();
     private List<PositionChart.PositionSeries> _positionSeries = new();
@@ -305,6 +334,29 @@
 
         if (leader != null && leader.Team.Id != TeamId)
             _pointsSeries.Add(new ChartSeries { Name = $"{leader.Team.DisplayName} (Tabellenführer)", Data = StatisticsService.GetPointsProgression(tableGames, leader.Team.Id, _playedMatchDays) });
+
+        _ = LoadCalendarAsync();
+    }
+
+    /// <summary>Lädt die Spiele aller Wettbewerbe nach, ohne den Aufbau der übrigen Seite aufzuhalten.</summary>
+    private async Task LoadCalendarAsync()
+    {
+        var teamId = TeamId;
+        var season = Season;
+        _calendarGames = null;
+        _calendarFailed = false;
+        try
+        {
+            var games = await GameService.GetTeamGamesAllCompetitionsAsync(teamId, season);
+            if (teamId == TeamId && season == Season)
+                _calendarGames = games;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            _calendarFailed = true;
+        }
+        await InvokeAsync(StateHasChanged);
     }
 
     private static string WdlWidth(int? value, int? total) =>

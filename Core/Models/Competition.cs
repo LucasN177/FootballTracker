@@ -158,4 +158,8 @@ public class Competition
     };
 
     public static IReadOnlyList<Competition> All { get; } = [Bundesliga, ZweiteBundesliga, DritteLiga, DfbPokal, ChampionsLeague];
+
+    /// <summary>Wettbewerb zu einem OpenLigaDB-Kürzel; null für Wettbewerbe, die die App nicht kennt.</summary>
+    public static Competition? FromShortcut(string? shortcut) =>
+        All.FirstOrDefault(c => string.Equals(c.Shortcut, shortcut, StringComparison.OrdinalIgnoreCase));
 }

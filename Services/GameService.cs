@@ -13,6 +13,7 @@ public class GameService(IOpenLigaDataRepository openLigaDataRepository, AppStat
 
     private readonly Dictionary<(string League, int Season), (DateTime LoadedAt, List<Game> Games)> _seasonCache = new();
     private readonly Dictionary<string, (DateTime LoadedAt, int MatchDay)> _currentMatchDay = new();
+    private readonly Dictionary<(int TeamId, int Season), (DateTime LoadedAt, List<Game> Games)> _teamCache = new();
 
     public DateTime? LastUpdate { get; private set; }
 
@@ -91,6 +92,41 @@ public class GameService(IOpenLigaDataRepository openLigaDataRepository, AppStat
     {
         var games = Unwrap(await openLigaDataRepository.GetMatchesBetweenTeams(teamId1, teamId2));
         return games.Where(g => g.MatchIsFinished).OrderByDescending(g => g.MatchDateTimeUtc).ToList();
+    }
+
+    /// <summary>
+    /// Alle Spiele eines Teams in einer Saison über alle Wettbewerbe der App (Liga, DFB-Pokal, Champions League),
+    /// unabhängig vom gewählten Wettbewerb. Eine einzige Anfrage an OpenLigaDB.
+    /// </summary>
+    public async Task<List<Game>> GetTeamGamesAllCompetitionsAsync(int teamId, int season)
+    {
+        var key = (teamId, season);
+        if (_teamCache.TryGetValue(key, out var cached) && !IsExpired(season, cached.LoadedAt))
+            return cached.Games;
+
+        var (weeksPast, weeksFuture) = GetSeasonWeekRange(season, DateTime.Today);
+        var response = await openLigaDataRepository.GetMatchesByTeam(teamId, weeksPast, weeksFuture);
+        // Ein Fehler ohne Exception bedeutet "keine Daten" (z.B. keine Spiele im Zeitraum), kein Verbindungsproblem.
+        var games = response.IsSuccess || response.Exception != null ? Unwrap(response) : [];
+
+        // OpenLigaDB liefert auch von Nutzern angelegte Test- und Freundschaftsligen – nur bekannte Wettbewerbe behalten.
+        var result = games
+            .Where(g => g.LeagueSeason == season && Competition.FromShortcut(g.LeagueShortcut) != null)
+            .DistinctBy(g => g.MatchId)
+            .OrderBy(g => g.KickoffUtc)
+            .ToList();
+        _teamCache[key] = (DateTime.Now, result);
+        return result;
+    }
+
+    /// <summary>Wochen vor und nach <paramref name="today"/>, die eine Saison (1. Juli bis 30. Juni) abdecken.</summary>
+    public static (int WeeksPast, int WeeksFuture) GetSeasonWeekRange(int season, DateTime today)
+    {
+        var start = new DateTime(season, 7, 1);
+        var end = new DateTime(season + 1, 6, 30);
+        var weeksPast = (int)Math.Ceiling(Math.Max(0, (today - start).TotalDays) / 7) + 1;
+        var weeksFuture = (int)Math.Ceiling(Math.Max(0, (end - today).TotalDays) / 7) + 1;
+        return (weeksPast, weeksFuture);
     }
 
     public async Task<List<Game>> GetLiveAndTodayGamesAsync(bool forceRefresh = false)
