@@ -34,24 +34,18 @@
     </MudPaper>
 
     <MudText Typo="Typo.overline" Class="mud-text-secondary d-block mb-2">Bilanz des Modells in dieser Saison</MudText>
-    <MudGrid Spacing="3" Class="mb-4">
-        <MudItem xs="6" md="3">
-            <StatCard Icon="@Icons.Material.Filled.TrackChanges" Color="Color.Success" Value="@BacktestValue(b => b.TendencyRate.ToString("P0"))" Label="Tendenz richtig"
-                      Hint="@BacktestValue(b => $"Immer Heimsieg: {b.HomeWinBaselineRate:P0}")" />
-        </MudItem>
-        <MudItem xs="6" md="3">
-            <StatCard Icon="@Icons.Material.Filled.GpsFixed" Color="Color.Primary" Value="@BacktestValue(b => $"{b.ExactHits} / {b.Games}")" Label="Exakte Ergebnisse"
-                      Hint="@BacktestValue(b => b.ExactRate.ToString("P1"))" />
-        </MudItem>
-        <MudItem xs="6" md="3">
-            <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Value="@BacktestValue(b => b.KicktippPoints.ToString())" Label="Kicktipp-Punkte"
-                      Hint="@BacktestValue(b => $"Ø {b.PointsPerGame:0.00} pro Spiel")" />
-        </MudItem>
-        <MudItem xs="6" md="3">
-            <StatCard Icon="@Icons.Material.Filled.Speed" Color="Color.Info" Value="@BacktestValue(b => b.BrierScore.ToString("0.000"))" Label="Brier-Score"
-                      Hint="Raten: 0,667 • kleiner ist besser" />
-        </MudItem>
-    </MudGrid>
+    <div class="ft-stat-grid mb-4">
+        <StatCard Icon="@Icons.Material.Filled.TrackChanges" Color="Color.Success" Value="@BacktestValue(b => b.TendencyRate.ToString("P0"))" Label="Tendenz richtig"
+                  Hint="@BacktestValue(b => $"Immer Heimsieg: {b.HomeWinBaselineRate:P0}")" />
+        <StatCard Icon="@Icons.Material.Filled.MilitaryTech" Color="Color.Secondary" Value="@BacktestValue(b => $"{b.WinnerHits} / {b.DecidedGames}")" Label="Sieger richtig getippt"
+                  Hint="@BacktestValue(b => $"Remis erkannt: {b.DrawHits} / {b.DrawGames}")" />
+        <StatCard Icon="@Icons.Material.Filled.GpsFixed" Color="Color.Primary" Value="@BacktestValue(b => $"{b.ExactHits} / {b.Games}")" Label="Exakte Ergebnisse"
+                  Hint="@BacktestValue(b => b.ExactRate.ToString("P1"))" />
+        <StatCard Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Value="@BacktestValue(b => b.KicktippPoints.ToString())" Label="Kicktipp-Punkte"
+                  Hint="@BacktestValue(b => $"Ø {b.PointsPerGame:0.00} pro Spiel")" />
+        <StatCard Icon="@Icons.Material.Filled.Speed" Color="Color.Info" Value="@BacktestValue(b => b.BrierScore.ToString("0.000"))" Label="Brier-Score"
+                  Hint="Raten: 0,667 • kleiner ist besser" />
+    </div>
 
     <DataState IsLoading="IsLoading" Error="@ErrorMessage" OnRetry="ReloadAsync" IsEmpty="!(_forecast?.Predictions.Any() ?? false)"
                EmptyIcon="@Icons.Material.Filled.Insights"

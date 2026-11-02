@@ -232,6 +232,25 @@ h1:focus {
     height: 100%;
 }
 
+/* Kennzahlen-Raster für fünf Karten (MudGrid teilt nur durch 12) */
+.ft-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+@media (min-width: 960px) {
+    .ft-stat-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1440px) {
+    .ft-stat-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
 .ft-stat-icon {
     background: var(--mud-palette-action-default-hover) !important;
     flex-shrink: 0;
