@@ -1,0 +1,148 @@
+@* Verlauf der Trefferquote je Spieltag und Vergleich der Modellbilanz über alle Saisons. *@
+@implements IDisposable
+@inject PredictionService PredictionService
+@inject AppStateService AppStateService
+
+<MudPaper Class="ft-card pa-4 pa-md-5 mb-4" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.h6">Trefferquote im Saisonverlauf</MudText>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">Richtige Tendenzen in Prozent – je Spieltag und kumuliert, im Vergleich zu „immer Heimsieg“</MudText>
+    @if (Backtest == null)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-6" />
+    }
+    else if (_matchDays.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary py-6" Align="Align.Center">Noch keine bewerteten Spiele in dieser Saison.</MudText>
+    }
+    else
+    {
+        <MudChart ChartType="ChartType.Line" ChartSeries="@_series" XAxisLabels="@_labels" Width="100%" Height="300px" ChartOptions="@_options" />
+    }
+</MudPaper>
+
+<MudPaper Class="ft-card pa-0 pa-md-2" Elevation="0" Outlined="true">
+    <div class="pa-4 pb-2">
+        <MudText Typo="Typo.h6">Saisonvergleich</MudText>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+            Bilanz des Modells in jeder Saison mit der gewählten Tipp-Strategie
+            @if (_loadingSeason is { } loading)
+            {
+                @($" – berechne {Season.FromYear(loading).Name}…")
+            }
+        </MudText>
+    </div>
+    <MudTable T="SeasonRow" Items="_rows" Dense="true" Elevation="0" Breakpoint="Breakpoint.None" HorizontalScrollbar="true" Class="ft-table"
+              RowClassFunc="@((row, _) => row.Year == SeasonYear ? "ft-row-selected" : "")">
+        <HeaderContent>
+            <MudTh>Saison</MudTh>
+            <MudTh Class="text-center">Spiele</MudTh>
+            <MudTh Class="text-center">Tendenz</MudTh>
+            <MudTh Class="text-center">Sieger</MudTh>
+            <MudTh Class="text-center">Remis</MudTh>
+            <MudTh Class="text-center">Exakt</MudTh>
+            <MudTh Class="text-center" title="Kicktipp-Punkte pro Spiel">Pkt/Sp.</MudTh>
+            <MudTh Class="text-center">Brier</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            @{ var b = context.Backtest.WithStrategy(Strategy); }
+            <MudTd Class="ft-nowrap">@Season.FromYear(context.Year).Name</MudTd>
+            <MudTd Class="text-center">@b.Games</MudTd>
+            <MudTd Class="text-center font-weight-bold">@Rate(b.TendencyHits, b.Games)</MudTd>
+            <MudTd Class="text-center">@Rate(b.WinnerHits, b.DecidedGames)</MudTd>
+            <MudTd Class="text-center">@Rate(b.DrawHits, b.DrawGames)</MudTd>
+            <MudTd Class="text-center">@Rate(b.ExactHits, b.Games)</MudTd>
+            <MudTd Class="text-center">@(b.Games == 0 ? "–" : b.PointsPerGame.ToString("0.00"))</MudTd>
+            <MudTd Class="text-center">@(b.Games == 0 ? "–" : b.BrierScore.ToString("0.000"))</MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private sealed record SeasonRow(int Year, PredictionBacktest Backtest);
+
+    /// <summary>Backtest der gewählten Saison; null, solange er noch berechnet wird.</summary>
+    [Parameter] public PredictionBacktest? Backtest { get; set; }
+    [Parameter] public TipStrategy Strategy { get; set; }
+    [Parameter, EditorRequired] public int SeasonYear { get; set; }
+
+    private List<(int MatchDay, int Games, int TendencyHits, int KicktippPoints, int HomeWins)> _matchDays = new();
+    private List<ChartSeries> _series = new();
+    private string[] _labels = [];
+    private readonly ChartOptions _options = new() { LineStrokeWidth = 3, InterpolationOption = InterpolationOption.Straight, YAxisTicks = 25 };
+
+    private readonly List<SeasonRow> _rows = new();
+    private int? _loadingSeason;
+    private string? _loadedLeague;
+    private readonly CancellationTokenSource _cts = new();
+
+    protected override void OnParametersSet()
+    {
+        _options.ChartPalette = AppStateService.SelectedCompetition.ChartColors;
+        BuildChart();
+        if (_loadedLeague != AppStateService.League)
+        {
+            _loadedLeague = AppStateService.League;
+            _ = LoadSeasonsAsync(_loadedLeague);
+        }
+    }
+
+    private void BuildChart()
+    {
+        _matchDays = Backtest?.WithStrategy(Strategy).ByMatchDay() ?? new();
+        int games = 0, hits = 0, homeWins = 0;
+        var perDay = new List<double>();
+        var cumulative = new List<double>();
+        var baseline = new List<double>();
+        foreach (var day in _matchDays)
+        {
+            games += day.Games;
+            hits += day.TendencyHits;
+            homeWins += day.HomeWins;
+            perDay.Add(Math.Round(100.0 * day.TendencyHits / day.Games));
+            cumulative.Add(Math.Round(100.0 * hits / games, 1));
+            baseline.Add(Math.Round(100.0 * homeWins / games, 1));
+        }
+
+        _series =
+        [
+            new ChartSeries { Name = "Kumuliert", Data = cumulative.ToArray() },
+            new ChartSeries { Name = "Am Spieltag", Data = perDay.ToArray() },
+            new ChartSeries { Name = "Immer Heimsieg (kumuliert)", Data = baseline.ToArray() }
+        ];
+        _labels = _matchDays.Select((d, i) => i == 0 || d.MatchDay % 5 == 0 || i == _matchDays.Count - 1 ? d.MatchDay.ToString() : string.Empty).ToArray();
+    }
+
+    /// <summary>Berechnet den Backtest aller Saisons nacheinander, neueste zuerst. Zeilen erscheinen, sobald sie fertig sind.</summary>
+    private async Task LoadSeasonsAsync(string league)
+    {
+        _rows.Clear();
+        foreach (var season in AppStateService.Saisons.Select(s => s.Year).ToList())
+        {
+            if (_cts.IsCancellationRequested || league != AppStateService.League)
+                return;
+            _loadingSeason = season;
+            StateHasChanged();
+            try
+            {
+                var backtest = await PredictionService.GetBacktestAsync(season, _cts.Token);
+                if (league != AppStateService.League)
+                    return;
+                _rows.Add(new SeasonRow(season, backtest));
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        }
+        _loadingSeason = null;
+        StateHasChanged();
+    }
+
+    private static string Rate(int hits, int total) => total == 0 ? "–" : $"{100.0 * hits / total:0} %";
+
+    public void Dispose() => _cts.Cancel();
+}

@@ -1,0 +1,197 @@
+@* Saisonprognose: Wahrscheinlichkeiten für Endplatzierung und Tabellenzonen aus einer Monte-Carlo-Simulation. *@
+@implements IDisposable
+@inject PredictionService PredictionService
+@inject AppStateService AppStateService
+@inject NavigationManager NavigationManager
+
+@if (_simulation == null)
+{
+    <MudPaper Class="ft-card pa-6" Elevation="0" Outlined="true">
+        @if (_failed)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Die Simulation konnte nicht berechnet werden.</MudAlert>
+        }
+        else if (_unavailable)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.Insights" Size="Size.Large" Class="mud-text-secondary" />
+                <MudText Typo="Typo.h6" Class="mud-text-secondary">Noch zu wenige Daten</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary" Align="Align.Center">
+                    Für die Simulation braucht das Modell mindestens zehn beendete Spiele aus dieser oder der Vorsaison.
+                </MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Saison wird @PredictionService.SimulationRuns.ToString("N0")-mal durchgespielt…</MudText>
+                <MudProgressLinear Color="Color.Primary" Value="@(_progress * 100)" Rounded="true" Size="Size.Medium" Style="max-width: 360px" />
+            </MudStack>
+        }
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="ft-card pa-0 pa-md-2" Elevation="0" Outlined="true">
+        <div class="pa-4 pb-2">
+            <MudText Typo="Typo.h6">Saisonprognose</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                @if (_simulation.RemainingGames == 0)
+                {
+                    @("Alle Spiele sind beendet – die Tabelle steht fest.")
+                }
+                else
+                {
+                    @($"Wahrscheinlichkeiten aus {_simulation.Runs:N0} simulierten Verläufen der restlichen {_simulation.RemainingGames} Spiele")
+                }
+            </MudText>
+        </div>
+        <MudTable T="SimulatedTeam" Items="_simulation.Teams" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.None" HorizontalScrollbar="true"
+                  OnRowClick="@(args => NavigationManager.NavigateTo($"TeamDetailsPage/{args.Item!.Team.Id}"))" RowClass="ft-clickable" Class="ft-table">
+            <HeaderContent>
+                <MudTh>#</MudTh>
+                <MudTh>Team</MudTh>
+                <MudTh Class="text-center" title="Aktuelle Punkte">Pkt</MudTh>
+                <MudTh Class="text-center" title="Erwartete Punkte am Saisonende">Ø Pkt</MudTh>
+                <MudTh Class="text-center d-none d-sm-table-cell" title="Erwarteter Endplatz">Ø Platz</MudTh>
+                @foreach (var column in _columns)
+                {
+                    <MudTh Class="text-center ft-nowrap" title="@column.Label">
+                        <div class="d-flex align-center justify-center gap-1">
+                            @if (column.Zone != null)
+                            {
+                                <span class="@($"ft-legend ft-pos-{column.Zone}")"></span>
+                            }
+                            <span>@column.ShortLabel</span>
+                        </div>
+                    </MudTh>
+                }
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@(_simulation.Teams.IndexOf(context) + 1)</MudTd>
+                <MudTd>
+                    <div class="d-flex align-center gap-2">
+                        <TeamLogo Url="@context.Team.LogoUrl" Name="@context.Team.Name" Size="22" />
+                        <span class="ft-ellipsis">@context.Team.DisplayName</span>
+                    </div>
+                </MudTd>
+                <MudTd Class="text-center">@context.Points</MudTd>
+                <MudTd Class="text-center font-weight-bold">@context.ExpectedPoints.ToString("0")</MudTd>
+                <MudTd Class="text-center d-none d-sm-table-cell">@context.ExpectedPosition.ToString("0.0")</MudTd>
+                @foreach (var column in _columns)
+                {
+                    var probability = column.Probability(context);
+                    <MudTd Class="text-center ft-nowrap ft-sim-cell" Style="@CellStyle(probability)">@FormatProbability(probability)</MudTd>
+                }
+            </RowTemplate>
+        </MudTable>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block pa-4 pt-2">
+            Die Teamstärken bleiben während der Simulation fest. Bei Punktgleichheit entscheiden Tordifferenz, Tore und danach das Los.
+            Die Zonen richten sich nur nach dem Tabellenplatz – Pokalsieger oder Lizenzentscheidungen sind nicht berücksichtigt.
+        </MudText>
+    </MudPaper>
+}
+
+@code {
+    private sealed record Column(string ShortLabel, string Label, string? Zone, Func<SimulatedTeam, double> Probability);
+
+    private static readonly Dictionary<string, string> ShortLabels = new()
+    {
+        ["cl"] = "CL",
+        ["el"] = "EL",
+        ["ecl"] = "ECL",
+        ["rel"] = "Rel.",
+        ["down"] = "Abstieg",
+        ["up"] = "Aufstieg",
+        ["relup"] = "Rel. ↑",
+        ["ko"] = "Top 8",
+        ["po"] = "Playoffs"
+    };
+
+    [Parameter, EditorRequired] public int Season { get; set; }
+
+    private SeasonSimulation? _simulation;
+    private List<Column> _columns = new();
+    private double _progress;
+    private bool _unavailable;
+    private bool _failed;
+    private (string League, int Season)? _loaded;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var key = (AppStateService.League, Season);
+        if (_loaded == key)
+            return;
+
+        _loaded = key;
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+        _simulation = null;
+        _unavailable = _failed = false;
+        _progress = 0;
+
+        try
+        {
+            var progress = new Progress<double>(value =>
+            {
+                _progress = value;
+                StateHasChanged();
+            });
+            var simulation = await PredictionService.GetSimulationAsync(Season, progress, token);
+            if (token.IsCancellationRequested)
+                return;
+
+            _simulation = simulation;
+            _unavailable = simulation == null;
+            if (simulation != null)
+                _columns = BuildColumns(AppStateService.SelectedCompetition, simulation.Teams.Count);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            _failed = true;
+        }
+    }
+
+    private static List<Column> BuildColumns(Competition competition, int teamCount)
+    {
+        var columns = new List<Column>();
+        if (competition != Competition.ChampionsLeague)
+            columns.Add(new Column("Meister", "Platz 1", null, t => t.PositionProbabilities[0]));
+
+        foreach (var (zone, label) in TablePositions.Legend(competition))
+        {
+            var positions = Enumerable.Range(1, teamCount).Where(p => TablePositions.GetZone(competition, p, teamCount) == zone).ToList();
+            if (positions.Count == 0)
+                continue;
+            var shortLabel = competition == Competition.ZweiteBundesliga && zone == "rel" ? "Rel. ↓" : ShortLabels.GetValueOrDefault(zone, label);
+            columns.Add(new Column(shortLabel, label, zone, t => positions.Sum(p => t.PositionProbabilities[p - 1])));
+        }
+
+        if (competition == Competition.ChampionsLeague)
+        {
+            var eliminated = Enumerable.Range(1, teamCount).Where(p => TablePositions.GetZone(competition, p, teamCount) == "none").ToList();
+            columns.Add(new Column("Aus", "Ausgeschieden", null, t => eliminated.Sum(p => t.PositionProbabilities[p - 1])));
+        }
+        return columns;
+    }
+
+    private static string FormatProbability(double probability) => probability switch
+    {
+        <= 0 => "–",
+        < 0.005 => "<1 %",
+        >= 1 => "100 %",
+        > 0.995 => ">99 %",
+        _ => $"{probability * 100:0} %"
+    };
+
+    private static string CellStyle(double probability) =>
+        probability <= 0 ? "" : $"background: color-mix(in srgb, var(--ft-primary) {Math.Round(probability * 45)}%, transparent)";
+
+    public void Dispose() => _cts?.Cancel();
+}

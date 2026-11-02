@@ -19,6 +19,11 @@ public class GameService(IOpenLigaDataRepository openLigaDataRepository, AppStat
     /// <summary>Wird bei jeder Datenänderung erhöht, damit abgeleitete Statistiken ihren Cache invalidieren können.</summary>
     public int Version { get; private set; }
 
+    /// <summary>Stand der Daten einer Saison (Wert von <see cref="Version"/> bei ihrer letzten Änderung, 0 = nicht geladen).</summary>
+    public int GetSeasonVersion(int season) => _seasonVersions.GetValueOrDefault((League, season));
+
+    private readonly Dictionary<(string League, int Season), int> _seasonVersions = new();
+
     /// <summary>Anzahl der Spieltage bzw. Runden des gewählten Wettbewerbs.</summary>
     public int MatchDaysPerSeason => appStateService.SelectedCompetition.RoundCount;
 
@@ -33,7 +38,7 @@ public class GameService(IOpenLigaDataRepository openLigaDataRepository, AppStat
         var games = Unwrap(await openLigaDataRepository.GetMatchData(key.League, season));
         _seasonCache[key] = (DateTime.Now, games);
         LastUpdate = DateTime.Now;
-        Version++;
+        _seasonVersions[key] = ++Version;
         return games;
     }
 
@@ -49,7 +54,7 @@ public class GameService(IOpenLigaDataRepository openLigaDataRepository, AppStat
                 cached.Games.AddRange(fresh);
             }
             LastUpdate = DateTime.Now;
-            Version++;
+            _seasonVersions[(League, season)] = ++Version;
             return fresh.OrderBy(g => g.MatchDateTimeUtc).ToList();
         }
 
